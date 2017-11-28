@@ -1,0 +1,24 @@
+{
+  "name": "quic",
+  "version": "1.0.0",
+  "description": "a front framework origin to data definations",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanyitec/quic.git"
+  },
+  "keywords": [
+    "front-framework",
+    "js",
+    "ts"
+  ],
+  "author": "yiy",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yanyitec/quic/issues"
+  },
+  "homepage": "https://github.com/yanyitec/quic#readme"
+}
