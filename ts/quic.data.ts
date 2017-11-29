@@ -1,21 +1,9 @@
+/// <reference path="quic.ts" />
+/// <reference path="quic.env.ts" />
 namespace Quic{
-    export class DataSource{
-        _data:{[index:string]:any};
-        constructor(dataOrCfg:any){
-            this._data = dataOrCfg as {[index:string]:any};
-        }
-        data(value?:{[index:string]:any}){
-            if(value===undefined) return this._data||(this._data={});
-            this._data = value|| {};
-        }
-        total=():number=>this._data.length;
-        
-        static create(data?:any):DataSource{
-            if(data instanceof DataSource) return data as DataSource;
-            return new DataSource(data);
-        }
-    }
     
+    //Defination
+    //数据字段定义选项
     export interface DataFieldOpts {
         //字段名
         name?:string;
@@ -25,7 +13,8 @@ namespace Quic{
         dataPath?:string;
        
         // 验证规则集
-        validations?:{[index:string]:Validator};
+        validations?:{[index:string]:any};
+        
     }
     
     export class DataField{
@@ -33,95 +22,118 @@ namespace Quic{
         dataType:string;
         dataPath:string;
         validations:{[index:string]:any};
-        _T:(key:string)=>string;
+        opts:any;
         _accessorFactory:DataAccessorFactory;
-        validate : (value:any)=>{[validType:string]:string};
-        constructor(opts?:DataFieldOpts){
-            if(opts)this.setOpts(opts);
+        _T:(key:string,mustReturn?:boolean)=>string;
+        validate : (value:any,state?:any)=>string;
+        constructor(opts:DataFieldOpts){
+            //字段名,去掉两边的空格
+            this.name = opts.name?opts.name.replace(trimRegx,""):undefined;
+            //必须有字段名
+            if(!this.name) throw new Error("name is required for DataField");
+            //数据类型，默认是string
+            this.dataType = opts.dataType?(opts.dataType.replace(trimRegx,"")||undefined):"string";
+            // 验证信息
+            this.validations = opts.validations;
+            // 原始定义
+            this.opts = opts;
+            //验证跟数据验证是同一个函数
             this.validate = this.dataValidate;
         }
-        setOpts(opts:DataFieldOpts):DataField{
-            if(opts.name){
-                if(this.name && this.name!=opts.name) throw new Error("Cannot change DataField.name");
-            }else{
-                if(!this.name) throw new Error("name is required for DataField");
-                this.name = opts.name;
-            }
-            this.dataType = opts.dataType||"string";
-            let oldDataPath = this.dataPath;
-            this.dataPath = opts.dataPath?opts.dataPath.replace(trimReg,""):this.name;
-            this.validations = opts.validations;
-            if(oldDataPath!=this.dataPath) {
-                this.value=function(data:{[index:string]:any},val?:any):any{
-                    this.value = (this._accessorFactory|| DataAccessorFactory.instance).cached(this.dataPath);
-                    return this.value(data,val);
-                }
-                this.dataValue=function(data:{[index:string]:any},val?:any):any{
-                    this.dataValue = (this._accessorFactory|| DataAccessorFactory.instance).cached(this.dataPath);
-                    return this.dataValue(data,val);
-                }
-            }
-            return this;
-        }
+        
         value(data:{[index:string]:any},val?:any):any{
-            this.value = DataAccessorFactory.create(this.dataPath);
+            this.value = (this._accessorFactory|| DataAccessorFactory.instance).cached(this.dataPath||this.name);
             return this.value(data,val);
         }
         dataValue(data:{[index:string]:any},val?:any):any{
-            this.dataValue = (this._accessorFactory|| DataAccessorFactory.instance).cached(this.dataPath);
+            this.dataValue = (this._accessorFactory|| DataAccessorFactory.instance).cached(this.dataPath|| this.name);
             return this.dataValue(data,val);
         }
-        validationInfos(){
+        validationInfos(_T:(txt:string,mustReturn?:boolean)=>string,accessorFactory:DataAccessorFactory,state?:any){
+            //没有定义验证规则，没有验证信息
+            if(!this.validations){
+                this.validationInfos = ()=>undefined;
+                return;
+            }
             let msgs :{[index:string]:string}= {};
+            let prefix :string = opts["validation-message-prefix"]||"valid-";
+
             for(var validType in this.validations){
                 let validator:Validator = validators[validType];
                 if(validator){
-                    msgs[validType] = validator(null,undefined,this.validations[validType]);
+                    if(!_T) _T =(txt:string,mustReturn?:boolean):string=>langs[txt]||(mustReturn===false?undefined:txt);
+                    if(validType==="string" || validType==="text" || validType==="str") validType="length";
+                    else if(validType==="number") validType="decimal";
+                    let messageKey = prefix + validType;
+                    let msg = _T(messageKey);
+                    let parameter = this.validations[validType];
+                    if(!parameter) {
+                        msgs[validType] = msg;
+                    }else {
+                        let t = typeof parameter;
+                        let submsg = "";
+                        if(typeof parameter ==="object"){
+                            for(var p in parameter){
+                                let subkey:string = messageKey + p;
+                                let subtxt:string = _T(subkey,false);
+                                if(subtxt) {
+                                    if(submsg)submsg += "," ;
+                                    submsg += subtxt;
+                                }
+                            }
+                        }else if(t==="string"){
+                            submsg = _T(parameter.toString());
+                        }
+                        msgs[validType] = msg+(submsg?":"+submsg:"");
+                    }
                 }
             }
-            return msgs;
+            for(let n in msgs){
+                this.validationInfos = ()=>msgs;
+                return msgs;
+            }
+            this.validationInfos = ()=>undefined;
+            return;
         }
-        
-        
-        dataValidate(value:any):{[validType:string]:string}{
+
+        dataValidate(value:any,state?:any):string{
             let validations = this.validations;
             if(!validations) { return ;}
-            let hasError = false;let validError :string;
-            let result :{[index:string]:string}={};
-            //let value = this.value(data);
-            let required = validations["required"];
-            let dataValidType = this.dataType || "length";
-            if(required){
-                let val = (value||"").replace(trimReg,"");
-                if(!val) {
-                    hasError = true;
-                    result["required"] = this._T("required");
-                    return result;
-                }
-            }
-            let validator:Validator = validators[dataValidType];
-            let validParameter :any = validations[dataValidType];
+            let hasError = false;
             
-            if(validator){
-                if(validError = validator(this,value,validParameter)){
-                    result[dataValidType] = validError;
-                    hasError=true;
+            //let value = this.value(data);
+            let required_v = validations["required"];
+            
+            if(required_v){
+                let val = value?value.toString().replace(trimRegx,""):"";
+                if(!val) {
+                    return "required";
                 }
             }
-
+            let type_v = validations[this.dataType];
+            let typeValidator:Validator = validators[this.dataType];            
+            if(typeValidator){
+                if(typeValidator(value,type_v,this,state)===false){
+                    return this.dataType.toString();
+                }
+            }
+            let result:string;
             for(var validType in validations){
-                if(validType==="required" || validType===dataValidType) continue;
-                validator = validators[validType];
-                if(!validator)continue;
-                validParameter = validations[validType];
-                if(validError = validator(this,value,validParameter)){
-                    result[validType] = validError;
-                    hasError= true;
+                if(validType==="required" || validType===this.dataType) continue;
+                let validator = validators[validType];
+                if(!validator){
+                    Quic.env.warn("unregistered validation type:" + validType);
+                    continue;
                 }
+                let validParameter = validations[validType];
+                let rs = validator(value,validParameter,this,state);
+                if(rs===false) return validType;
+                if(rs!==true)result=null;
+                
             }
-            return (hasError)?result:null; 
+            return result; 
         }
-        
+        static validationMessagePrefix:string ="valid-message-";
         
     }
     export interface DataAccessor{
@@ -152,7 +164,7 @@ namespace Quic{
             }
             let paths = dataPath.split(".");
             
-            let last_propname = paths.shift().replace(trimReg,"");
+            let last_propname = paths.shift().replace(trimRegx,"");
             if(!last_propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
             let codes = {
                 path:"data",
@@ -160,7 +172,7 @@ namespace Quic{
                 setter_code:""
             };
             for(let i =0,j=paths.length;i<j;i++){
-                let propname = paths[i].replace(trimReg,"");
+                let propname = paths[i].replace(trimRegx,"");
                 buildPropCodes(propname,dataPath,codes);
             }
             buildPropCodes(last_propname,dataPath,codes,true);
@@ -174,145 +186,100 @@ namespace Quic{
         }
         static instance:DataAccessorFactory = new DataAccessorFactory();
     }
-    export function format(text:string,data?:any){
-        if(!data)return text;
+    export function str_replace(text:any,data?:any,accessorFactory?:DataAccessorFactory){
+        if(text===null || text===undefined) text="";
+        else text = text.toString();
+        //if(!data){ return text;}
+        let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
+        accessorFactory || (accessorFactory=DataAccessorFactory.instance);
+        return text.replace(regx,function(m){
+            let accessor :(data:{[index:string]:any},value?:any)=>any;
+            let expr :string = m[1];
+            try{
+                accessor = accessorFactory.cached(expr);
+            }catch(ex){
+                Quic.env.warn("Invalid datapath expression:" + expr);
+                return "{INVALID:"+expr+"}";
+            }
+            return data?accessor(data):"";
+        });
     }
     export interface Validator{
-        (field:DataField,value:any,parameter:any):string;
+        (value:any,parameter?:any,field?:DataField,state?:any):boolean;
     }
     let validators:{[validType:string]:Validator}  ={};
-    validators["length"]=(field:DataField,value:any,parameter:any):string=>{
-        parameter ||(parameter={});
-        let message:string = "";
-        let len = ((value===undefined||value===null)?"":value).length;
-        if(parameter.min && (!field || parameter.min>len)){
-            if(parameter.max && (!field || parameter.max<len)){
-                message = field._T("length should be more than {min}, and less than {min}")
-                    .replace("{min}",parameter.min)
-                    .replace("{max}",parameter.max);
-            }else{
-                message = field._T("length should be more than {min}")
-                    .replace("{min}",parameter.min);
-            }
-        }else {
-            if(parameter.max  && (!field || parameter.max<len)){
-                message = field._T("length should be less than {max}")
-                    .replace("{max}",parameter.max);
-            }
-        }
-        return message;
+
+    
+    validators["length"]=(value:any,parameter?:any,field?:DataField,state?:any):boolean=>{
+
+        let val = (value===undefined||value===null)?0:value.toString().length;
+        if(parameter && parameter.min && parameter.min>val) return false;
+        if(parameter && parameter.max && parameter.max<val) return false;
+        return true;
     }
-    validators["int"]=(field:DataField,value:any,parameter:any):string=>{
-        parameter ||(parameter={});
-        let message:string = "";
-        let val:number;
-        if(!field){
-            message = field._T("must be integer");
-        }else{
-            val = parseInt(value);
-            if(isNaN(val)) return field._T("must be integer");
-        }
-        if(parameter.min && (!field || parameter.min>val)){
-            if(parameter.max && (!field || parameter.max<val)){
-                message += (message?"":"\n") + field._T("value should be more than {min}, and less than {min}")
-                    .replace("{min}",parameter.min)
-                    .replace("{max}",parameter.max);
-            }else{
-                message += (message?"":"\n") +field._T("value should be more than {min}")
-                    .replace("{min}",parameter.min);
-            }
-        }else {
-            if(parameter.max  && (!field || parameter.max<val)){
-                message += (message?"":"\n") +field._T("value should be less than {max}")
-                    .replace("{max}",parameter.max);
-            }
-        }
+    validators["string"] = validators["text"] = validators["length"];
+
+    validators["int"]=(value:any,parameter?:any,field?:DataField,state?:any):boolean=>{
+        if(value===null || value===undefined)return;
+        value=value.toString().replace(trimRegx,"");
+        if(!value) return;
+        if(!intRegx.test(value))return false;
+            
+        let val:number =parseInt(value);
+        if(parameter && parameter.min && parameter.min>val) return false;
+        if(parameter && parameter.max && parameter.max<val) return false;
+        return true;
+    }
+    validators["decimal"]=(value:any,parameter?:any,field?:DataField,state?:any):boolean=>{
+        if(value===null || value===undefined)return;
+        value=value.toString().replace(trimRegx,"");
+        if(!value) return;
+        let match :RegExpMatchArray = value.match(decimalRegx);
+        if(!match)return false;
         
-        return message;
+        if(parameter && parameter.ipart && match[0].replace(/,/g,"").length>parameter.ipart)return false;
+        if(parameter && parameter.fpart && match[1] && match[1].length-1>parameter.fpart)return false;
+
+        let val:number =parseFloat(value);
+        if(parameter && parameter.min && parameter.min>val) return false;
+        if(parameter && parameter.max && parameter.max<val) return false;
+        return true;
     }
-    validators["decimal"]=(field:DataField,value:any,parameter:any):string=>{
-        parameter ||(parameter={});
-        let message:string = "";
-        let val:number;
-        if(!field){
-            message = field._T("must be decimal");
-        }else{
-            val = parseInt(value);
-            if(isNaN(val)) return field._T("must be decimal");
-        }
-        let match = val.toString().match(/[+\-]?(\d+)(?".(\d+))\d/g);
-        if(parameter.ipart && (!field || parameter.ipart<match[1].length)){
-            message += (message?"":"\n") +field._T("integer part should be less than {ipart}")
-            .replace("{ipart}",parameter.ipart);
-            if(field) return message;
-        }
-        if(parameter.fpart && (!field || !match[2] || parameter.fpart<match[2].length)){
-            message += (message?"":"\n") +field._T("float part should be less than {fpart}")
-            .replace("{fpart}",parameter.fpart);
-            if(field) return message;
-        }
-        if(parameter.min && (!field || parameter.min>val)){
-            if(parameter.max && (!field || parameter.max<val)){
-                message += (message?"":"\n") + field._T("value should be more than {min}, and less than {min}")
-                    .replace("{min}",parameter.min)
-                    .replace("{max}",parameter.max);
-            }else{
-                message += (message?"":"\n") +field._T("value should be more than {min}")
-                    .replace("{min}",parameter.min);
-            }
-        }else {
-            if(parameter.max  && (!field || parameter.max<val)){
-                message += (message?"":"\n") +field._T("value should be less than {max}")
-                    .replace("{max}",parameter.max);
-            }
-        }
-        
-        return message;
-    }
-    validators["email"]=(field:DataField,value:any,parameter:any):string=>{
-        if(!field) return field._T("must be email address format");
-        let emailReg :RegExp = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/i;
+    validators["email"]=(value:any,parameter?:any,field?:DataField,state?:any):boolean=>{
+        if(value===null || value===undefined || /\s+/.test(value))return;
         if(value===undefined || value===null) return null;
-        if(!emailReg.test(value)) return field._T("invalid email address");
-        return null;
+        return emailRegx.test(value);
     }
     //
-    validators["url"] = (field:DataField,value:any,parameter:any):string=>{
-        if(!field) return field._T("must be url address format");
-        let urlReg :RegExp = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/;
-        if(value===undefined || value===null) return null;
-        if(!urlReg.test(value)) return field._T("invalid url address");
-        return null;
+    validators["url"] = (value:any,parameter?:any,field?:DataField,state?:any):boolean=>{
+        if(value===null || value===undefined || /\s+/.test(value))return;
+        return urlRegx.test(value);
     }
-    validators["regex"] = (field:DataField,value:any,parameter:any):string=>{
-        if(!field) return field._T("must be correct format");
-        if(!parameter){
+    validators["regex"] = (value:any,parameter?:any,field?:DataField,state?:any):boolean=>{
+        if(value===null || value===undefined)return;
+        
+        let reg :RegExp ;
+        try{
+            reg = new RegExp(parameter);
+        }catch(ex){
+            throw Error("parameter is invalid regex:" + parameter);
+        }
 
-        }
-        let reg :RegExp = new RegExp(parameter);
-        if(value===undefined || value===null) return null;
-        if(!reg.test(value)) return field._T("invalid format");
-        return null;
+        return reg.test(value);
     }
-    validators["remote"] = (field:DataField,value:any,parameter:any):string=>{
-        if(!parameter) parameter={};
-        if(typeof parameter==="string") parameter = {url:parameter};
-        if(!field) {
-            if(parameter.message) return field._T(parameter.message);
-        }
+    validators["remote"] = (value:any,parameter?:any,field?:DataField,state?:any):boolean=>{
+        
         throw new Error("Not implement");
     }
-    
-
-
-    
-    let arrReg =/(?:\[\d+\])+$/g;
-    let trimReg = /(^\s+)|(\s+$)/g;
-    
-    
+    export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
+    export let trimRegx:RegExp = /(^\s+)|(\s+$)/g;
+    export let urlRegx :RegExp = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
+    export let emailRegx :RegExp = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/g;
+    export let intRegx :RegExp = /(^[+\-]?\d+$)|(^[+\-]?\d{1,3}(,\d{3})?$)/;
+    export let decimalRegx:RegExp= /^((?:[+\-]?\d+)|(?:[+\-]?\d{1,3}(?:\d{3})?))(.\d+)?$/;
     function buildPropCodes(propname:string,dataPath,codes:any,isLast?:boolean){
         if(!propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-        let match = arrReg.exec(propname);
+        let match = arrRegx.exec(propname);
         let nextObjValue="{}";
         let sub=undefined;
         if(match){
@@ -360,5 +327,27 @@ namespace Quic{
             
         }
     }
-
+    export let opts={
+        "validation-message-prefix":"valid-"
+    };
+    export let langs = {
+        "valid-required":"必填",
+        "valid-length":"字符个数",
+        "valid-length-min":"至少{min}",
+        "valid-length-max":"最多{max}",
+        "valid-length-min-max":"{min}-{max}个",
+        "valid-int":"必须是整数",
+        "valid-int-min":"最小值为{min}",
+        "valid-int-max":"最大值为{max}",
+        "valid-int-min-max":"取值范围为{min}-{max}",
+        "valid-decimal":"必须是数字",
+        "valid-decimal-min":"最小值为{min}",
+        "valid-decimal-max":"最大值为{max}",
+        "valid-decimal-min-max":"取值范围为{min}-{max}",
+        "valid-decimal-ipart":"整数部分最多{min}位",
+        "valid-decimal-fpart":"小数部分最多{max}位",
+        "valid-email":"必须是电子邮件地址格式",
+        "valid-url":"必须是URL地址格式",
+        "valid-regex":"必须符合格式"
+    };
 }

@@ -1,345 +1,351 @@
+/// <reference path="quic.ts" />
+/// <reference path="quic.env.ts" />
 var Quic;
 (function (Quic) {
-    var DataSource = /** @class */ (function () {
-        function DataSource(dataOrCfg) {
-            var _this = this;
-            this.total = function () { return _this._data.length; };
-            this._data = dataOrCfg;
-        }
-        DataSource.prototype.data = function (value) {
-            if (value === undefined)
-                return this._data || (this._data = {});
-            this._data = value || {};
-        };
-        DataSource.create = function (data) {
-            if (data instanceof DataSource)
-                return data;
-            return new DataSource(data);
-        };
-        return DataSource;
-    }());
-    Quic.DataSource = DataSource;
-    var DataField = /** @class */ (function () {
-        function DataField(opts) {
-            if (opts)
-                this.setOpts(opts);
-        }
-        DataField.prototype.setOpts = function (opts) {
-            var _this = this;
+    class DataField {
+        constructor(opts) {
+            //字段名,去掉两边的空格
+            this.name = opts.name ? opts.name.replace(Quic.trimRegx, "") : undefined;
+            //必须有字段名
             if (!this.name)
-                this.name = opts.name;
-            this.dataType = opts.dataType || "string";
-            var oldDataPath = this.dataPath;
-            this.dataPath = opts.dataPath ? opts.dataPath.replace(trimReg, "") : this.name;
+                throw new Error("name is required for DataField");
+            //数据类型，默认是string
+            this.dataType = opts.dataType ? (opts.dataType.replace(Quic.trimRegx, "") || undefined) : "string";
+            // 验证信息
             this.validations = opts.validations;
-            if (oldDataPath != this.dataPath) {
-                this.value = function (data, val) {
-                    _this.value = DataAccessorFactory.create(_this.dataPath);
-                    return _this.value(data, val);
-                };
-            }
-            return this;
-        };
-        DataField.prototype.value = function (data, val) {
-            this.value = DataAccessorFactory.create(this.dataPath);
+            // 原始定义
+            this.opts = opts;
+            //验证跟数据验证是同一个函数
+            this.validate = this.dataValidate;
+        }
+        value(data, val) {
+            this.value = (this._accessorFactory || DataAccessorFactory.instance).cached(this.dataPath || this.name);
             return this.value(data, val);
-        };
-        DataField.prototype.validate = function (data) {
-            var validations = this.validations;
+        }
+        dataValue(data, val) {
+            this.dataValue = (this._accessorFactory || DataAccessorFactory.instance).cached(this.dataPath || this.name);
+            return this.dataValue(data, val);
+        }
+        validationInfos(_T, accessorFactory, state) {
+            //没有定义验证规则，没有验证信息
+            if (!this.validations) {
+                this.validationInfos = () => undefined;
+                return;
+            }
+            let msgs = {};
+            let prefix = Quic.opts["validation-message-prefix"] || "valid-";
+            for (var validType in this.validations) {
+                let validator = validators[validType];
+                if (validator) {
+                    if (!_T)
+                        _T = (txt, mustReturn) => Quic.langs[txt] || (mustReturn === false ? undefined : txt);
+                    if (validType === "string" || validType === "text" || validType === "str")
+                        validType = "length";
+                    else if (validType === "number")
+                        validType = "decimal";
+                    let messageKey = prefix + validType;
+                    let msg = _T(messageKey);
+                    let parameter = this.validations[validType];
+                    if (!parameter) {
+                        msgs[validType] = msg;
+                    }
+                    else {
+                        let t = typeof parameter;
+                        let submsg = "";
+                        if (typeof parameter === "object") {
+                            for (var p in parameter) {
+                                let subkey = messageKey + p;
+                                let subtxt = _T(subkey, false);
+                                if (subtxt) {
+                                    if (submsg)
+                                        submsg += ",";
+                                    submsg += subtxt;
+                                }
+                            }
+                        }
+                        else if (t === "string") {
+                            submsg = _T(parameter.toString());
+                        }
+                        msgs[validType] = msg + (submsg ? ":" + submsg : "");
+                    }
+                }
+            }
+            for (let n in msgs) {
+                this.validationInfos = () => msgs;
+                return msgs;
+            }
+            this.validationInfos = () => undefined;
+            return;
+        }
+        dataValidate(value, state) {
+            let validations = this.validations;
             if (!validations) {
                 return;
             }
-            var hasError = false;
-            var validError;
-            var result = {};
-            var value = this.value(data);
-            var required = validations["required"];
-            var dataValidType = this.dataType || "length";
-            if (required) {
-                var val = (value || "").replace(trimReg, "");
+            let hasError = false;
+            //let value = this.value(data);
+            let required_v = validations["required"];
+            if (required_v) {
+                let val = value ? value.toString().replace(Quic.trimRegx, "") : "";
                 if (!val) {
-                    hasError = true;
-                    result["required"] = this._T("required");
-                    return result;
+                    return "required";
                 }
             }
-            var validator = validators[dataValidType];
-            var validParameter = validations[dataValidType];
-            if (validator) {
-                if (validError = validator(this, value, validParameter)) {
-                    result[dataValidType] = validError;
-                    hasError = true;
+            let type_v = validations[this.dataType];
+            let typeValidator = validators[this.dataType];
+            if (typeValidator) {
+                if (typeValidator(value, type_v, this, state) === false) {
+                    return this.dataType.toString();
                 }
             }
+            let result;
             for (var validType in validations) {
-                if (validType === "required" || validType === dataValidType)
+                if (validType === "required" || validType === this.dataType)
                     continue;
-                validator = validators[validType];
-                if (!validator)
+                let validator = validators[validType];
+                if (!validator) {
+                    Quic.env.warn("unregistered validation type:" + validType);
                     continue;
-                validParameter = validations[validType];
-                if (validError = validator(this, value, validParameter)) {
-                    result[validType] = validError;
-                    hasError = true;
                 }
+                let validParameter = validations[validType];
+                let rs = validator(value, validParameter, this, state);
+                if (rs === false)
+                    return validType;
+                if (rs !== true)
+                    result = null;
             }
-            return (hasError) ? result : null;
-        };
-        DataField.validators = {};
-        return DataField;
-    }());
+            return result;
+        }
+    }
+    DataField.validationMessagePrefix = "valid-message-";
     Quic.DataField = DataField;
-    var DataAccessorFactory = /** @class */ (function () {
-        function DataAccessorFactory() {
+    class DataAccessorFactory {
+        constructor() {
             this.caches = {};
         }
-        DataAccessorFactory.prototype.cached = function (dataPath) {
-            var accessor = this.caches[dataPath];
+        cached(dataPath) {
+            let accessor = this.caches[dataPath];
             if (!accessor) {
                 accessor = this.caches[dataPath] = DataAccessorFactory.create(dataPath);
             }
             return accessor;
-        };
-        DataAccessorFactory.create = function (dataPath) {
-            if (dataPath == "$") {
-                return function (data, value) {
-                    if (value === undefined)
-                        return data;
-                    throw new Error("setting cannot apply for datapath[$]");
-                };
-            }
-            var paths = dataPath.split(".");
-            var last_propname = paths.shift().replace(trimReg, "");
-            if (!last_propname)
-                throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-            var codes = {
-                path: "data",
-                getter_code: "",
-                setter_code: ""
-            };
-            for (var i = 0, j = paths.length; i < j; i++) {
-                var propname = paths[i].replace(trimReg, "");
-                buildPropCodes(propname, dataPath, codes);
-            }
-            buildPropCodes(last_propname, dataPath, codes, true);
-            var code = "if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-            code += "var at;\nif(value===undefined){\n" + codes.getter_code + "\treturn data;\n}else{\n" + codes.setter_code + "\n}\n";
-            return new Function("data", code);
-        };
-        DataAccessorFactory.instance = new DataAccessorFactory();
-        return DataAccessorFactory;
-    }());
-    Quic.DataAccessorFactory = DataAccessorFactory;
-    function format(text, data) {
-        if (!data)
-            return text;
+        }
+        static cached(dataPath) {
+            return DataAccessorFactory.instance.cached(dataPath);
+        }
     }
-    Quic.format = format;
-    var validators = DataField.validators = {};
-    validators["length"] = function (field, value, parameter) {
-        parameter || (parameter = {});
-        var message = "";
-        var len = ((value === undefined || value === null) ? "" : value).length;
-        if (parameter.min && (!field || parameter.min > len)) {
-            if (parameter.max && (!field || parameter.max < len)) {
-                message = field._T("length should be more than {min}, and less than {min}")
-                    .replace("{min}", parameter.min)
-                    .replace("{max}", parameter.max);
-            }
-            else {
-                message = field._T("length should be more than {min}")
-                    .replace("{min}", parameter.min);
-            }
+    DataAccessorFactory.create = (dataPath) => {
+        if (dataPath == "$") {
+            return function (data, value) {
+                if (value === undefined)
+                    return data;
+                throw new Error("setting cannot apply for datapath[$]");
+            };
         }
-        else {
-            if (parameter.max && (!field || parameter.max < len)) {
-                message = field._T("length should be less than {max}")
-                    .replace("{max}", parameter.max);
-            }
+        let paths = dataPath.split(".");
+        let last_propname = paths.shift().replace(Quic.trimRegx, "");
+        if (!last_propname)
+            throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
+        let codes = {
+            path: "data",
+            getter_code: "",
+            setter_code: ""
+        };
+        for (let i = 0, j = paths.length; i < j; i++) {
+            let propname = paths[i].replace(Quic.trimRegx, "");
+            buildPropCodes(propname, dataPath, codes);
         }
-        return message;
+        buildPropCodes(last_propname, dataPath, codes, true);
+        let code = "if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
+        code += "var at;\nif(value===undefined){\n" + codes.getter_code + "\treturn data;\n}else{\n" + codes.setter_code + "\n}\n";
+        return new Function("data", code);
     };
-    validators["int"] = function (field, value, parameter) {
-        parameter || (parameter = {});
-        var message = "";
-        var val;
-        if (!field) {
-            message = field._T("must be integer");
-        }
-        else {
-            val = parseInt(value);
-            if (isNaN(val))
-                return field._T("must be integer");
-        }
-        if (parameter.min && (!field || parameter.min > val)) {
-            if (parameter.max && (!field || parameter.max < val)) {
-                message += (message ? "" : "\n") + field._T("value should be more than {min}, and less than {min}")
-                    .replace("{min}", parameter.min)
-                    .replace("{max}", parameter.max);
+    DataAccessorFactory.instance = new DataAccessorFactory();
+    Quic.DataAccessorFactory = DataAccessorFactory;
+    function str_replace(text, data, accessorFactory) {
+        if (text === null || text === undefined)
+            text = "";
+        else
+            text = text.toString();
+        //if(!data){ return text;}
+        let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
+        accessorFactory || (accessorFactory = DataAccessorFactory.instance);
+        return text.replace(regx, function (m) {
+            let accessor;
+            let expr = m[1];
+            try {
+                accessor = accessorFactory.cached(expr);
             }
-            else {
-                message += (message ? "" : "\n") + field._T("value should be more than {min}")
-                    .replace("{min}", parameter.min);
+            catch (ex) {
+                Quic.env.warn("Invalid datapath expression:" + expr);
+                return "{INVALID:" + expr + "}";
             }
-        }
-        else {
-            if (parameter.max && (!field || parameter.max < val)) {
-                message += (message ? "" : "\n") + field._T("value should be less than {max}")
-                    .replace("{max}", parameter.max);
-            }
-        }
-        return message;
+            return data ? accessor(data) : "";
+        });
+    }
+    Quic.str_replace = str_replace;
+    let validators = {};
+    validators["length"] = (value, parameter, field, state) => {
+        let val = (value === undefined || value === null) ? 0 : value.toString().length;
+        if (parameter && parameter.min && parameter.min > val)
+            return false;
+        if (parameter && parameter.max && parameter.max < val)
+            return false;
+        return true;
     };
-    validators["decimal"] = function (field, value, parameter) {
-        parameter || (parameter = {});
-        var message = "";
-        var val;
-        if (!field) {
-            message = field._T("must be decimal");
-        }
-        else {
-            val = parseInt(value);
-            if (isNaN(val))
-                return field._T("must be decimal");
-        }
-        var match = val.toString().match(/[+\-]?(\d+)(?".(\d+))\d/g);
-        if (parameter.ipart && (!field || parameter.ipart < match[1].length)) {
-            message += (message ? "" : "\n") + field._T("integer part should be less than {ipart}")
-                .replace("{ipart}", parameter.ipart);
-            if (field)
-                return message;
-        }
-        if (parameter.fpart && (!field || !match[2] || parameter.fpart < match[2].length)) {
-            message += (message ? "" : "\n") + field._T("float part should be less than {fpart}")
-                .replace("{fpart}", parameter.fpart);
-            if (field)
-                return message;
-        }
-        if (parameter.min && (!field || parameter.min > val)) {
-            if (parameter.max && (!field || parameter.max < val)) {
-                message += (message ? "" : "\n") + field._T("value should be more than {min}, and less than {min}")
-                    .replace("{min}", parameter.min)
-                    .replace("{max}", parameter.max);
-            }
-            else {
-                message += (message ? "" : "\n") + field._T("value should be more than {min}")
-                    .replace("{min}", parameter.min);
-            }
-        }
-        else {
-            if (parameter.max && (!field || parameter.max < val)) {
-                message += (message ? "" : "\n") + field._T("value should be less than {max}")
-                    .replace("{max}", parameter.max);
-            }
-        }
-        return message;
+    validators["string"] = validators["text"] = validators["length"];
+    validators["int"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined)
+            return;
+        value = value.toString().replace(Quic.trimRegx, "");
+        if (!value)
+            return;
+        if (!Quic.intRegx.test(value))
+            return false;
+        let val = parseInt(value);
+        if (parameter && parameter.min && parameter.min > val)
+            return false;
+        if (parameter && parameter.max && parameter.max < val)
+            return false;
+        return true;
     };
-    validators["email"] = function (field, value, parameter) {
-        if (!field)
-            return field._T("must be email address format");
-        var emailReg = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/i;
+    validators["decimal"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined)
+            return;
+        value = value.toString().replace(Quic.trimRegx, "");
+        if (!value)
+            return;
+        let match = value.match(Quic.decimalRegx);
+        if (!match)
+            return false;
+        if (parameter && parameter.ipart && match[0].replace(/,/g, "").length > parameter.ipart)
+            return false;
+        if (parameter && parameter.fpart && match[1] && match[1].length - 1 > parameter.fpart)
+            return false;
+        let val = parseFloat(value);
+        if (parameter && parameter.min && parameter.min > val)
+            return false;
+        if (parameter && parameter.max && parameter.max < val)
+            return false;
+        return true;
+    };
+    validators["email"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined || /\s+/.test(value))
+            return;
         if (value === undefined || value === null)
             return null;
-        if (!emailReg.test(value))
-            return field._T("invalid email address");
-        return null;
+        return Quic.emailRegx.test(value);
     };
     //
-    validators["url"] = function (field, value, parameter) {
-        if (!field)
-            return field._T("must be url address format");
-        var urlReg = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/;
-        if (value === undefined || value === null)
-            return null;
-        if (!urlReg.test(value))
-            return field._T("invalid url address");
-        return null;
+    validators["url"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined || /\s+/.test(value))
+            return;
+        return Quic.urlRegx.test(value);
     };
-    validators["regex"] = function (field, value, parameter) {
-        if (!field)
-            return field._T("must be correct format");
-        if (!parameter) {
+    validators["regex"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined)
+            return;
+        let reg;
+        try {
+            reg = new RegExp(parameter);
         }
-        var reg = new RegExp(parameter);
-        if (value === undefined || value === null)
-            return null;
-        if (!reg.test(value))
-            return field._T("invalid format");
-        return null;
+        catch (ex) {
+            throw Error("parameter is invalid regex:" + parameter);
+        }
+        return reg.test(value);
     };
-    validators["remote"] = function (field, value, parameter) {
-        if (!parameter)
-            parameter = {};
-        if (typeof parameter === "string")
-            parameter = { url: parameter };
-        if (!field) {
-            if (parameter.message)
-                return field._T(parameter.message);
-        }
+    validators["remote"] = (value, parameter, field, state) => {
         throw new Error("Not implement");
     };
-    var arrReg = /(?:\[\d+\])+$/g;
-    var trimReg = /(^\s+)|(\s+$)/g;
+    Quic.arrRegx = /(?:\[\d+\])+$/g;
+    Quic.trimRegx = /(^\s+)|(\s+$)/g;
+    Quic.urlRegx = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
+    Quic.emailRegx = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/g;
+    Quic.intRegx = /(^[+\-]?\d+$)|(^[+\-]?\d{1,3}(,\d{3})?$)/;
+    Quic.decimalRegx = /^((?:[+\-]?\d+)|(?:[+\-]?\d{1,3}(?:\d{3})?))(.\d+)?$/;
     function buildPropCodes(propname, dataPath, codes, isLast) {
         if (!propname)
             throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-        var match = arrReg.exec(propname);
-        var nextObjValue = "{}";
-        var sub = undefined;
+        let match = Quic.arrRegx.exec(propname);
+        let nextObjValue = "{}";
+        let sub = undefined;
         if (match) {
             sub = match.toString();
             propname = propname.substring(0, propname.length - sub.length);
             nextObjValue = "[]";
         }
         codes.path += "." + propname;
-        codes.getter_code += "\tif(!data." + propname + ")return undefined;else data=data." + propname + ";\n";
-        codes.setter_code += "\tif(!data)data." + propname + "=" + nextObjValue + ";\n";
+        codes.getter_code += `\tif(!data.${propname})return undefined;else data=data.${propname};\n`;
+        codes.setter_code += `\tif(!data)data.${propname}=${nextObjValue};\n`;
         if (sub) {
-            var subs = sub.substr(1, sub.length - 2).split(/\s*\]\s*\[\s*/g);
-            for (var m = 0, n = subs.length - 1; m <= n; m++) {
-                var indexAt = subs[m];
+            let subs = sub.substr(1, sub.length - 2).split(/\s*\]\s*\[\s*/g);
+            for (let m = 0, n = subs.length - 1; m <= n; m++) {
+                let indexAt = subs[m];
                 if (indexAt === "first") {
-                    codes.getter_code += "\tif(!data[0])return undefined;else data = data[0];\n";
+                    codes.getter_code += `\tif(!data[0])return undefined;else data = data[0];\n`;
                     if (m == n) {
                         //最后一个[]
                         if (isLast)
-                            codes.setter_code += "\tif(!data[0]) data[0] = value;\n";
+                            codes.setter_code += `\tif(!data[0]) data[0] = value;\n`;
                         else
-                            codes.setter_code += "\tif(!data[0]) data = data[0]={};else data=data[0];\n";
+                            codes.setter_code += `\tif(!data[0]) data = data[0]={};else data=data[0];\n`;
                     }
                     else {
-                        codes.setter_code += "\tif(!data[0]) data[0]=[]\"\n";
+                        codes.setter_code += `\tif(!data[0]) data[0]=[]"\n`;
                     }
                 }
                 else if (indexAt === "last") {
-                    codes.getter_code += "\tat = data.length?data.length-1:0; if(!data[at])return undefined;else data = data[at];\n";
+                    codes.getter_code += `\tat = data.length?data.length-1:0; if(!data[at])return undefined;else data = data[at];\n`;
                     if (m == n) {
                         //最后一个[]
                         if (isLast)
-                            codes.setter_code += "\tat = data.length?data.length-1:0; if(!data[at]) data[at]=value\";\n";
+                            codes.setter_code += `\tat = data.length?data.length-1:0; if(!data[at]) data[at]=value";\n`;
                         else
-                            codes.setter_code += "\tat = data.length?data.length-1:0; if(!data[at]) data = data[at]={};else data=data[at];\n";
+                            codes.setter_code += `\tat = data.length?data.length-1:0; if(!data[at]) data = data[at]={};else data=data[at];\n`;
                     }
                     else {
-                        codes.setter_code += "\tat = data.length ? data.length-1 : 0; if(!data[at]) data = data[at]=[];else data=data[at];\n";
+                        codes.setter_code += `\tat = data.length ? data.length-1 : 0; if(!data[at]) data = data[at]=[];else data=data[at];\n`;
                     }
                 }
                 else {
                     if (!/\d+/.test(indexAt))
                         throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-                    codes.getter_code += "\tif(!data[" + indexAt + "])return undefined;else data = data[" + indexAt + "];\n";
+                    codes.getter_code += `\tif(!data[${indexAt}])return undefined;else data = data[${indexAt}];\n`;
                     if (m == n) {
                         //最后一个[]
                         if (isLast)
-                            codes.setter_code += "\tif(!data[" + indexAt + "]) data[" + indexAt + "]=value\";\n";
+                            codes.setter_code += `\tif(!data[${indexAt}]) data[${indexAt}]=value";\n`;
                         else
-                            codes.setter_code += "\tif(!data[" + indexAt + "]) data = data[" + indexAt + "]={};else data=data[" + indexAt + "];\n";
+                            codes.setter_code += `\tif(!data[${indexAt}]) data = data[${indexAt}]={};else data=data[${indexAt}];\n`;
                     }
                     else {
-                        codes.setter_code += "\tif(!data[" + indexAt + "]) data = data[" + indexAt + "]=[];else data=data[" + indexAt + "];\n";
+                        codes.setter_code += `\tif(!data[${indexAt}]) data = data[${indexAt}]=[];else data=data[${indexAt}];\n`;
                     }
                 }
             }
         }
     }
+    Quic.opts = {
+        "validation-message-prefix": "valid-"
+    };
+    Quic.langs = {
+        "valid-required": "必填",
+        "valid-length": "字符个数",
+        "valid-length-min": "至少{min}",
+        "valid-length-max": "最多{max}",
+        "valid-length-min-max": "{min}-{max}个",
+        "valid-int": "必须是整数",
+        "valid-int-min": "最小值为{min}",
+        "valid-int-max": "最大值为{max}",
+        "valid-int-min-max": "取值范围为{min}-{max}",
+        "valid-decimal": "必须是数字",
+        "valid-decimal-min": "最小值为{min}",
+        "valid-decimal-max": "最大值为{max}",
+        "valid-decimal-min-max": "取值范围为{min}-{max}",
+        "valid-decimal-ipart": "整数部分最多{min}位",
+        "valid-decimal-fpart": "小数部分最多{max}位",
+        "valid-email": "必须是电子邮件地址格式",
+        "valid-url": "必须是URL地址格式",
+        "valid-regex": "必须符合格式"
+    };
 })(Quic || (Quic = {}));
