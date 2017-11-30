@@ -1,4 +1,5 @@
 /// <reference path="quic.ts" />
+/// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
 /// <reference path="quic.dom.ts" />
 /// <reference path="quic.data.ts" />
@@ -28,6 +29,14 @@ var Quic;
             };
             this.base = base;
         }
+        css(permission) {
+            let _this = this;
+            let fn = _this[permission];
+            if (fn)
+                return fn.call(this);
+            return this.base;
+        }
+        ;
     }
     Quic.ViewCSS = ViewCSS;
     function isHtmlNode(node) {

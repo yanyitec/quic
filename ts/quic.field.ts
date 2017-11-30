@@ -1,6 +1,7 @@
 /// <reference path="quic.ts" />
+/// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
-/// <reference path="quic.data.ts" />
+/// <reference path="quic.datafield.ts" />
 /// <reference path="quic.view.ts" />
 namespace Quic{
     
@@ -8,17 +9,20 @@ namespace Quic{
         text?:string;
         group?:string;
         css?:string;
+        permission?:string;
     }
     
 
-    export class Field extends DataField implements View{
+    export class Field extends DataField implements IView{
         viewType:string;
-        css:ViewCss;
-        container:View;
-        builder:ViewBuilder;
+        CSS:ViewCss;
+        css:string;
+        container:IViewset;
+        builder:IViewBuilder;
         text:string;
         group:string;
-        constructor(container:View,opts:FieldOpts){
+        permission:string;
+        constructor(container:IViewset,opts:FieldOpts){
             super(opts);
             this.container = container;
             this.text = opts.text;
@@ -28,51 +32,19 @@ namespace Quic{
 
             let css = "field " + this.viewType + " " + this.name;
             if(opts.css) css +=" " + opts.css;
-            this.css = new ViewCSS(css);
+            if(opts.permission) this.permission = opts.permission;
+            this.CSS = new ViewCSS(css);
         }
-        
 
-        value(data:{[index:string]:any},element?:any,value?:any):any{
-            if(isHtmlNode(data)){
-                value = element;
-                element = data;
-                data = undefined;
-            }else if(!isHtmlNode(element)){
-                value = element;
-                element = undefined;
-            }
-            
-            if(value===undefined){
-                if(element){
-                    value = this.builder.getViewValue(this,element as HTMLElement);
-                    if(data) super.value(data,value);
-                } else if(data){
-                    value = super.value(data);
-                }else {
-                    throw new Error("must have element or data.");
-                }
-                return value;
-            }else {
-                if(element){
-                    this.builder.setViewValue(this,element,value);
-                    if(data) super.value(data,value);
-                }else if(data){
-                    super.value(data,value);
-                }else{
-                    throw new Error("must have element or data.");
-                }
-                return this;
-            }
-        }
+              
         
-        viewValue(element?:any,value?:any):any{
+        viewValue(element:HTMLElement,value?:any):any{
             if(value===undefined) return this.builder.getViewValue(this,element);
             this.builder.getViewValue(this,element);
             return this;
         }
-        viewValidate(element?:HTMLElement,data?:{[index:string]:any},state?:any):string{
+        viewValidate(element?:HTMLElement,state?:any):string{
             let value = this.builder.getViewValue(this,element);
-            if(data) this.dataValue(data,value);
             let validType:string =  this.dataValidate(value,state);
             if(validType){
                 let wrapper:HTMLElement = element.parentNode as HTMLElement;
@@ -117,13 +89,13 @@ namespace Quic{
             element.className = cssor();
             if(permission==="hidden")element.style.display="none";
             let id = "quic_input_"+(Quic as any).nextGNo();
-            let text = this.text || (this._T?this._T(this.name):this.name);
+            let text = this.text || this.container._T(this.text) || this.container._T(this.name);
             let required = (this.validations && this.validations.required)?"<ins class='field-required'>*</ins>":"";
             element.innerHTML = `<label class="field-caption" for="${id}">${text}${required}</label>`;
             let input = creator(this,data);let validInput = input["quic-valid-input"]||input;
             input.name = this.name;validInput.id= id;
             element.appendChild(input);
-            let validInfos = this.validationInfos(this._T,this._accessorFactory);
+            let validInfos = this.validationInfos(this.container._T);
             if(validateRequired===true && permission==="editable" && validInfos){
                 let info = document.createElement("label") as HTMLLabelElement;
                 (info as any).for = id;
@@ -167,39 +139,6 @@ namespace Quic{
         
         //static viewBuilders:{[viewType:string]:ViewBuilder}={};
     }
-    export function getExactType(obj:any):string{
-        let t = typeof obj;
-        if(t==="object"){
-            if(t===null)return "null";
-            if(obj instanceof RegExp) return "regex";
-            if(obj.nodeType!==undefined && obj.appendChild && obj.getAttribute) return "HTMLElement";
-            if(Object.prototype.toString.call(obj)==="[object Array]")return "array";
-        }
-        return t;
-    }
-    export function extend(dest:any,src:any,arg2?:any,arg3?:any,arg4?:any,arg5?:any,arg6?:any,arg7?:any,arg8?:any):any{
-       
-        if(!src) return dest;
-        if(!dest) dest={};
-        for(var n in src){
-            let srcValue = src[n];
-            let destValue = dest[n];
-            let srcValueType = getExactType(srcValue);
-            let destValueType = getExactType(destValue);
-            if(srcValueType==="object"){
-                if(destValueType!=="object") destValue = dest[n] = {};
-                extend(destValue,srcValue);
-            }else if(srcValueType==="array"){
-                if(destValueType!=="object" && destValueType!=="array" && destValueType!=="function") destValue = dest[n] = [];
-                extend(destValue,srcValue);
-            }else {
-                if(destValue===undefined) dest[n] = srcValue;
-            }
-        }
-        for(let i=2,j=arguments.length;i<j;i++){
-            extend(dest,arguments[i]);
-        }
-        return dest;
-    }
+    
     
 }

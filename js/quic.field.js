@@ -1,4 +1,5 @@
 /// <reference path="quic.ts" />
+/// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
 /// <reference path="quic.data.ts" />
 /// <reference path="quic.view.ts" />
@@ -17,6 +18,8 @@ var Quic;
             let css = "field " + this.viewType + " " + this.name;
             if (opts.css)
                 css += " " + opts.css;
+            if (opts.permission)
+                this.permission = opts.permission;
             this.css = new Quic.ViewCSS(css);
         }
         value(data, element, value) {

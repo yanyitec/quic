@@ -1,4 +1,5 @@
 /// <reference path="quic.ts" />
+/// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
 var Quic;
 (function (Quic) {
@@ -19,11 +20,11 @@ var Quic;
             this.validate = this.dataValidate;
         }
         value(data, val) {
-            this.value = (this._accessorFactory || DataAccessorFactory.instance).cached(this.dataPath || this.name);
+            this.value = (this._accessorFactory || Quic.DataAccessorFactory.instance).cached(this.dataPath || this.name);
             return this.value(data, val);
         }
         dataValue(data, val) {
-            this.dataValue = (this._accessorFactory || DataAccessorFactory.instance).cached(this.dataPath || this.name);
+            this.dataValue = (this._accessorFactory || Quic.DataAccessorFactory.instance).cached(this.dataPath || this.name);
             return this.dataValue(data, val);
         }
         validationInfos(_T, accessorFactory, state) {
@@ -119,71 +120,6 @@ var Quic;
     }
     DataField.validationMessagePrefix = "valid-message-";
     Quic.DataField = DataField;
-    class DataAccessorFactory {
-        constructor() {
-            this.caches = {};
-        }
-        cached(dataPath) {
-            let accessor = this.caches[dataPath];
-            if (!accessor) {
-                accessor = this.caches[dataPath] = DataAccessorFactory.create(dataPath);
-            }
-            return accessor;
-        }
-        static cached(dataPath) {
-            return DataAccessorFactory.instance.cached(dataPath);
-        }
-    }
-    DataAccessorFactory.create = (dataPath) => {
-        if (dataPath == "$") {
-            return function (data, value) {
-                if (value === undefined)
-                    return data;
-                throw new Error("setting cannot apply for datapath[$]");
-            };
-        }
-        let paths = dataPath.split(".");
-        let last_propname = paths.shift().replace(Quic.trimRegx, "");
-        if (!last_propname)
-            throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-        let codes = {
-            path: "data",
-            getter_code: "",
-            setter_code: ""
-        };
-        for (let i = 0, j = paths.length; i < j; i++) {
-            let propname = paths[i].replace(Quic.trimRegx, "");
-            buildPropCodes(propname, dataPath, codes);
-        }
-        buildPropCodes(last_propname, dataPath, codes, true);
-        let code = "if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-        code += "var at;\nif(value===undefined){\n" + codes.getter_code + "\treturn data;\n}else{\n" + codes.setter_code + "\n}\n";
-        return new Function("data", code);
-    };
-    DataAccessorFactory.instance = new DataAccessorFactory();
-    Quic.DataAccessorFactory = DataAccessorFactory;
-    function str_replace(text, data, accessorFactory) {
-        if (text === null || text === undefined)
-            text = "";
-        else
-            text = text.toString();
-        //if(!data){ return text;}
-        let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory = DataAccessorFactory.instance);
-        return text.replace(regx, function (m) {
-            let accessor;
-            let expr = m[1];
-            try {
-                accessor = accessorFactory.cached(expr);
-            }
-            catch (ex) {
-                Quic.env.warn("Invalid datapath expression:" + expr);
-                return "{INVALID:" + expr + "}";
-            }
-            return data ? accessor(data) : "";
-        });
-    }
-    Quic.str_replace = str_replace;
     let validators = {};
     validators["length"] = (value, parameter, field, state) => {
         let val = (value === undefined || value === null) ? 0 : value.toString().length;
@@ -257,74 +193,6 @@ var Quic;
     validators["remote"] = (value, parameter, field, state) => {
         throw new Error("Not implement");
     };
-    Quic.arrRegx = /(?:\[\d+\])+$/g;
-    Quic.trimRegx = /(^\s+)|(\s+$)/g;
-    Quic.urlRegx = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
-    Quic.emailRegx = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/g;
-    Quic.intRegx = /(^[+\-]?\d+$)|(^[+\-]?\d{1,3}(,\d{3})?$)/;
-    Quic.decimalRegx = /^((?:[+\-]?\d+)|(?:[+\-]?\d{1,3}(?:\d{3})?))(.\d+)?$/;
-    function buildPropCodes(propname, dataPath, codes, isLast) {
-        if (!propname)
-            throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-        let match = Quic.arrRegx.exec(propname);
-        let nextObjValue = "{}";
-        let sub = undefined;
-        if (match) {
-            sub = match.toString();
-            propname = propname.substring(0, propname.length - sub.length);
-            nextObjValue = "[]";
-        }
-        codes.path += "." + propname;
-        codes.getter_code += `\tif(!data.${propname})return undefined;else data=data.${propname};\n`;
-        codes.setter_code += `\tif(!data)data.${propname}=${nextObjValue};\n`;
-        if (sub) {
-            let subs = sub.substr(1, sub.length - 2).split(/\s*\]\s*\[\s*/g);
-            for (let m = 0, n = subs.length - 1; m <= n; m++) {
-                let indexAt = subs[m];
-                if (indexAt === "first") {
-                    codes.getter_code += `\tif(!data[0])return undefined;else data = data[0];\n`;
-                    if (m == n) {
-                        //最后一个[]
-                        if (isLast)
-                            codes.setter_code += `\tif(!data[0]) data[0] = value;\n`;
-                        else
-                            codes.setter_code += `\tif(!data[0]) data = data[0]={};else data=data[0];\n`;
-                    }
-                    else {
-                        codes.setter_code += `\tif(!data[0]) data[0]=[]"\n`;
-                    }
-                }
-                else if (indexAt === "last") {
-                    codes.getter_code += `\tat = data.length?data.length-1:0; if(!data[at])return undefined;else data = data[at];\n`;
-                    if (m == n) {
-                        //最后一个[]
-                        if (isLast)
-                            codes.setter_code += `\tat = data.length?data.length-1:0; if(!data[at]) data[at]=value";\n`;
-                        else
-                            codes.setter_code += `\tat = data.length?data.length-1:0; if(!data[at]) data = data[at]={};else data=data[at];\n`;
-                    }
-                    else {
-                        codes.setter_code += `\tat = data.length ? data.length-1 : 0; if(!data[at]) data = data[at]=[];else data=data[at];\n`;
-                    }
-                }
-                else {
-                    if (!/\d+/.test(indexAt))
-                        throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-                    codes.getter_code += `\tif(!data[${indexAt}])return undefined;else data = data[${indexAt}];\n`;
-                    if (m == n) {
-                        //最后一个[]
-                        if (isLast)
-                            codes.setter_code += `\tif(!data[${indexAt}]) data[${indexAt}]=value";\n`;
-                        else
-                            codes.setter_code += `\tif(!data[${indexAt}]) data = data[${indexAt}]={};else data=data[${indexAt}];\n`;
-                    }
-                    else {
-                        codes.setter_code += `\tif(!data[${indexAt}]) data = data[${indexAt}]=[];else data=data[${indexAt}];\n`;
-                    }
-                }
-            }
-        }
-    }
     Quic.opts = {
         "validation-message-prefix": "valid-"
     };

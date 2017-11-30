@@ -1,4 +1,5 @@
 /// <reference path="quic.ts" />
+/// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
 namespace Quic{
     
@@ -9,22 +10,27 @@ namespace Quic{
         name?:string;
         // 数据类型 默认是string
         dataType?:string;
-        // 数据映射路径
-        dataPath?:string;
+        
        
         // 验证规则集
         validations?:{[index:string]:any};
+        // 数据映射路径
+        mappath?:string;
         
     }
+
+    export interface IDataField extends DataFieldOpts{
+        dataValidate : (value:any,state?:any)=>string;
+        opts:any;
+    }
     
-    export class DataField{
+    export class DataField implements IDataField{
         name:string;
         dataType:string;
         dataPath:string;
         validations:{[index:string]:any};
         opts:any;
-        _accessorFactory:DataAccessorFactory;
-        _T:(key:string,mustReturn?:boolean)=>string;
+       
         validate : (value:any,state?:any)=>string;
         constructor(opts:DataFieldOpts){
             //字段名,去掉两边的空格
@@ -41,15 +47,8 @@ namespace Quic{
             this.validate = this.dataValidate;
         }
         
-        value(data:{[index:string]:any},val?:any):any{
-            this.value = (this._accessorFactory|| DataAccessorFactory.instance).cached(this.dataPath||this.name);
-            return this.value(data,val);
-        }
-        dataValue(data:{[index:string]:any},val?:any):any{
-            this.dataValue = (this._accessorFactory|| DataAccessorFactory.instance).cached(this.dataPath|| this.name);
-            return this.dataValue(data,val);
-        }
-        validationInfos(_T:(txt:string,mustReturn?:boolean)=>string,accessorFactory:DataAccessorFactory,state?:any){
+        
+        validationInfos(_T:(txt:string,mustReturn?:boolean)=>string){
             //没有定义验证规则，没有验证信息
             if(!this.validations){
                 this.validationInfos = ()=>undefined;
@@ -136,74 +135,10 @@ namespace Quic{
         static validationMessagePrefix:string ="valid-message-";
         
     }
-    export interface DataAccessor{
-        getter?:()=>any;
-        setter?:(value:any)=>any;
-        dataObject?:()=>any;
-    }
     
     
-    export class DataAccessorFactory{
-        caches:{[dataPath:string]:(data:{[index:string]:any},value?:any)=>any};
-        constructor(){
-            this.caches = {};
-        }
-        cached(dataPath:string):(data:{[index:string]:any},value?:any)=>any{
-            let accessor:(data:{[index:string]:any},value?:any)=>any =  this.caches[dataPath];
-            if(!accessor){
-                accessor = this.caches[dataPath] = DataAccessorFactory.create(dataPath);
-            }
-            return accessor;
-        }
-        static create : (dataPath:string)=>(data:{[index:string]:any},value?:any)=>any = (dataPath:string):(data:{[index:string]:any},value?:any)=>any=>{
-            if(dataPath=="$"){
-                return function(data:{[index:string]:any},value?:any):any{
-                    if(value===undefined) return data;
-                    throw new Error("setting cannot apply for datapath[$]");
-                };
-            }
-            let paths = dataPath.split(".");
-            
-            let last_propname = paths.shift().replace(trimRegx,"");
-            if(!last_propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-            let codes = {
-                path:"data",
-                getter_code:"",
-                setter_code:""
-            };
-            for(let i =0,j=paths.length;i<j;i++){
-                let propname = paths[i].replace(trimRegx,"");
-                buildPropCodes(propname,dataPath,codes);
-            }
-            buildPropCodes(last_propname,dataPath,codes,true);
-            let code = "if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-            code +="var at;\nif(value===undefined){\n" +codes.getter_code + "\treturn data;\n}else{\n" + codes.setter_code + "\n}\n";
-            return new Function("data",code) as (data:{[index:string]:any},value?:any)=>any;
-            
-        };
-        static cached(dataPath:string):(data:{[index:string]:any},value?:any)=>any{
-            return DataAccessorFactory.instance.cached(dataPath);
-        }
-        static instance:DataAccessorFactory = new DataAccessorFactory();
-    }
-    export function str_replace(text:any,data?:any,accessorFactory?:DataAccessorFactory){
-        if(text===null || text===undefined) text="";
-        else text = text.toString();
-        //if(!data){ return text;}
-        let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory=DataAccessorFactory.instance);
-        return text.replace(regx,function(m){
-            let accessor :(data:{[index:string]:any},value?:any)=>any;
-            let expr :string = m[1];
-            try{
-                accessor = accessorFactory.cached(expr);
-            }catch(ex){
-                Quic.env.warn("Invalid datapath expression:" + expr);
-                return "{INVALID:"+expr+"}";
-            }
-            return data?accessor(data):"";
-        });
-    }
+    
+    
     export interface Validator{
         (value:any,parameter?:any,field?:DataField,state?:any):boolean;
     }
@@ -271,65 +206,9 @@ namespace Quic{
         
         throw new Error("Not implement");
     }
-    export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
-    export let trimRegx:RegExp = /(^\s+)|(\s+$)/g;
-    export let urlRegx :RegExp = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
-    export let emailRegx :RegExp = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/g;
-    export let intRegx :RegExp = /(^[+\-]?\d+$)|(^[+\-]?\d{1,3}(,\d{3})?$)/;
-    export let decimalRegx:RegExp= /^((?:[+\-]?\d+)|(?:[+\-]?\d{1,3}(?:\d{3})?))(.\d+)?$/;
-    function buildPropCodes(propname:string,dataPath,codes:any,isLast?:boolean){
-        if(!propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-        let match = arrRegx.exec(propname);
-        let nextObjValue="{}";
-        let sub=undefined;
-        if(match){
-            sub = match.toString();
-            propname = propname.substring(0,propname.length-sub.length);
-            nextObjValue="[]";
-        }
-        codes.path +="." + propname;
-        codes.getter_code += `\tif(!data.${propname})return undefined;else data=data.${propname};\n`;
-        codes.setter_code += `\tif(!data)data.${propname}=${nextObjValue};\n`;
-        if(sub) {
-            let subs = sub.substr(1,sub.length-2).split(/\s*\]\s*\[\s*/g);
-            for(let m=0,n=subs.length-1;m<=n;m++){
-                let indexAt = subs[m];
-                if(indexAt==="first"){
-                    codes.getter_code += `\tif(!data[0])return undefined;else data = data[0];\n`;
-                    if(m==n){
-                        //最后一个[]
-                        if(isLast) codes.setter_code += `\tif(!data[0]) data[0] = value;\n`;
-                        else codes.setter_code += `\tif(!data[0]) data = data[0]={};else data=data[0];\n`;
-                    }else{
-                        codes.setter_code += `\tif(!data[0]) data[0]=[]"\n`;
-                    }
-                }else if(indexAt==="last"){
-                    codes.getter_code += `\tat = data.length?data.length-1:0; if(!data[at])return undefined;else data = data[at];\n`;
-                    if(m==n){
-                        //最后一个[]
-                        if(isLast) codes.setter_code += `\tat = data.length?data.length-1:0; if(!data[at]) data[at]=value";\n`;
-                        else codes.setter_code += `\tat = data.length?data.length-1:0; if(!data[at]) data = data[at]={};else data=data[at];\n`;
-                    }else{
-                        codes.setter_code += `\tat = data.length ? data.length-1 : 0; if(!data[at]) data = data[at]=[];else data=data[at];\n`;
-                    }
-                }else {
-                    if(!/\d+/.test(indexAt)) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-                    codes.getter_code += `\tif(!data[${indexAt}])return undefined;else data = data[${indexAt}];\n`;
-                    if(m==n){
-                        //最后一个[]
-                        if(isLast) codes.setter_code += `\tif(!data[${indexAt}]) data[${indexAt}]=value";\n`;
-                        else codes.setter_code += `\tif(!data[${indexAt}]) data = data[${indexAt}]={};else data=data[${indexAt}];\n`;
-                    }else{
-                        codes.setter_code += `\tif(!data[${indexAt}]) data = data[${indexAt}]=[];else data=data[${indexAt}];\n`;
-                    }
-                }       
-            }
-            
-        }
-    }
-    export let opts={
-        "validation-message-prefix":"valid-"
-    };
+    
+    
+    
     export let langs = {
         "valid-required":"必填",
         "valid-length":"字符个数",
