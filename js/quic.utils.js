@@ -1,5 +1,8 @@
 var Quic;
 (function (Quic) {
+    Quic.opts = {
+        "validation-message-prefix": "valid-"
+    };
     Quic.arrRegx = /(?:\[\d+\])+$/g;
     Quic.trimRegx = /(^\s+)|(\s+$)/g;
     Quic.urlRegx = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
@@ -9,6 +12,10 @@ var Quic;
     Quic.trim = (o) => o === null || o === undefined ? "" : o.toString().replace(Quic.trimRegx, "");
     let toString = Object.prototype.toString;
     Quic.isArray = (o) => toString.call(o) === "[object Array]";
+    function isElement(node) {
+        return node.nodeType !== undefined && node.getAttribute && node.appendChild;
+    }
+    Quic.isElement = isElement;
     function getExactType(o) {
         if (o === null)
             return "null";
@@ -63,22 +70,22 @@ var Quic;
         return -1;
     }
     Quic.array_index = array_index;
-    class DataAccessorFactory {
+    class AccessorFactory {
         constructor() {
             this.caches = {};
         }
         cached(dataPath) {
             let accessor = this.caches[dataPath];
             if (!accessor) {
-                accessor = this.caches[dataPath] = DataAccessorFactory.create(dataPath);
+                accessor = this.caches[dataPath] = AccessorFactory.create(dataPath);
             }
             return accessor;
         }
         static cached(dataPath) {
-            return DataAccessorFactory.instance.cached(dataPath);
+            return AccessorFactory.instance.cached(dataPath);
         }
     }
-    DataAccessorFactory.create = (dataPath) => {
+    AccessorFactory.create = (dataPath) => {
         if (dataPath == "$") {
             return function (data, value) {
                 if (value === undefined)
@@ -104,8 +111,8 @@ var Quic;
         code += "var at;\nif(value===undefined){\n" + codes.getter_code + "\treturn data;\n}else{\n" + codes.setter_code + "\n}\n";
         return new Function("data", code);
     };
-    DataAccessorFactory.instance = new DataAccessorFactory();
-    Quic.DataAccessorFactory = DataAccessorFactory;
+    AccessorFactory.instance = new AccessorFactory();
+    Quic.AccessorFactory = AccessorFactory;
     function buildPropCodes(propname, dataPath, codes, isLast) {
         if (!propname)
             throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
@@ -175,7 +182,7 @@ var Quic;
             text = text.toString();
         //if(!data){ return text;}
         let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory = DataAccessorFactory.instance);
+        accessorFactory || (accessorFactory = AccessorFactory.instance);
         return text.replace(regx, function (m) {
             let accessor;
             let expr = m[1];

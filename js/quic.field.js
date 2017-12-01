@@ -1,76 +1,35 @@
 /// <reference path="quic.ts" />
 /// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
-/// <reference path="quic.data.ts" />
+/// <reference path="quic.datafield.ts" />
 /// <reference path="quic.view.ts" />
 var Quic;
 (function (Quic) {
     class Field extends Quic.DataField {
-        constructor(container, opts) {
-            super(opts);
-            this.container = container;
-            this.text = opts.text;
-            if (!(this.viewType = opts.viewType)) {
+        constructor(dataset, defs) {
+            super(defs);
+            this.fieldset = dataset;
+            this.text = defs.text;
+            if (!(this.viewType = defs.viewType)) {
                 this.viewType = this.dataType;
             }
-            if (!(this.builder = Quic.viewBuilders[this.viewType]))
+            if (!(this.viewBuilder = Quic.viewBuilders[this.viewType]))
                 throw new Error("Invalid viewType:" + this.viewType + ". viewBuilder is not found.");
             let css = "field " + this.viewType + " " + this.name;
-            if (opts.css)
-                css += " " + opts.css;
-            if (opts.permission)
-                this.permission = opts.permission;
-            this.css = new Quic.ViewCSS(css);
-        }
-        value(data, element, value) {
-            if (Quic.isHtmlNode(data)) {
-                value = element;
-                element = data;
-                data = undefined;
-            }
-            else if (!Quic.isHtmlNode(element)) {
-                value = element;
-                element = undefined;
-            }
-            if (value === undefined) {
-                if (element) {
-                    value = this.builder.getViewValue(this, element);
-                    if (data)
-                        super.value(data, value);
-                }
-                else if (data) {
-                    value = super.value(data);
-                }
-                else {
-                    throw new Error("must have element or data.");
-                }
-                return value;
-            }
-            else {
-                if (element) {
-                    this.builder.setViewValue(this, element, value);
-                    if (data)
-                        super.value(data, value);
-                }
-                else if (data) {
-                    super.value(data, value);
-                }
-                else {
-                    throw new Error("must have element or data.");
-                }
-                return this;
-            }
+            if (defs.css)
+                css += " " + defs.css;
+            if (defs.permission)
+                this.permission = defs.permission;
+            this.Css = new Quic.ViewCSS(css);
         }
         viewValue(element, value) {
             if (value === undefined)
-                return this.builder.getViewValue(this, element);
-            this.builder.getViewValue(this, element);
+                return this.viewBuilder.getViewValue(this, element);
+            this.viewBuilder.getViewValue(this, element);
             return this;
         }
-        viewValidate(element, data, state) {
-            let value = this.builder.getViewValue(this, element);
-            if (data)
-                this.dataValue(data, value);
+        viewValidate(element, state) {
+            let value = this.viewBuilder.getViewValue(this, element);
             let validType = this.dataValidate(value, state);
             if (validType) {
                 let wrapper = element.parentNode;
@@ -107,7 +66,7 @@ var Quic;
             return validType;
         }
         createElement(data, permission, validateRequired) {
-            let creator = this.builder[permission];
+            let creator = this.viewBuilder[permission];
             if (!creator)
                 throw new Error("Invalid permission value:" + permission);
             let cssor = this.css[permission];
@@ -120,7 +79,7 @@ var Quic;
             if (permission === "hidden")
                 element.style.display = "none";
             let id = "quic_input_" + Quic.nextGNo();
-            let text = this.text || (this._T ? this._T(this.name) : this.name);
+            let text = this.text || this.fieldset._T(this.text) || this.fieldset._T(this.name);
             let required = (this.validations && this.validations.required) ? "<ins class='field-required'>*</ins>" : "";
             element.innerHTML = `<label class="field-caption" for="${id}">${text}${required}</label>`;
             let input = creator(this, data);
@@ -128,7 +87,7 @@ var Quic;
             input.name = this.name;
             validInput.id = id;
             element.appendChild(input);
-            let validInfos = this.validationInfos(this._T, this._accessorFactory);
+            let validInfos = this.validationInfos(this.fieldset._T);
             if (validateRequired === true && permission === "editable" && validInfos) {
                 let info = document.createElement("label");
                 info.for = id;

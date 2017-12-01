@@ -59,7 +59,7 @@ namespace Quic{
          return -1;
      }
 
-     export class DataAccessorFactory{
+     export class AccessorFactory{
         caches:{[dataPath:string]:(data:{[index:string]:any},value?:any)=>any};
         constructor(){
             this.caches = {};
@@ -67,7 +67,7 @@ namespace Quic{
         cached(dataPath:string):(data:{[index:string]:any},value?:any)=>any{
             let accessor:(data:{[index:string]:any},value?:any)=>any =  this.caches[dataPath];
             if(!accessor){
-                accessor = this.caches[dataPath] = DataAccessorFactory.create(dataPath);
+                accessor = this.caches[dataPath] = AccessorFactory.create(dataPath);
             }
             return accessor;
         }
@@ -98,9 +98,9 @@ namespace Quic{
             
         };
         static cached(dataPath:string):(data:{[index:string]:any},value?:any)=>any{
-            return DataAccessorFactory.instance.cached(dataPath);
+            return AccessorFactory.instance.cached(dataPath);
         }
-        static instance:DataAccessorFactory = new DataAccessorFactory();
+        static instance:AccessorFactory = new AccessorFactory();
     }
     function buildPropCodes(propname:string,dataPath,codes:any,isLast?:boolean){
         if(!propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
@@ -152,12 +152,12 @@ namespace Quic{
             
         }
     }
-    export function str_replace(text:any,data?:any,accessorFactory?:DataAccessorFactory){
+    export function str_replace(text:any,data?:any,accessorFactory?:AccessorFactory){
         if(text===null || text===undefined) text="";
         else text = text.toString();
         //if(!data){ return text;}
         let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory=DataAccessorFactory.instance);
+        accessorFactory || (accessorFactory=AccessorFactory.instance);
         return text.replace(regx,function(m){
             let accessor :(data:{[index:string]:any},value?:any)=>any;
             let expr :string = m[1];

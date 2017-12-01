@@ -5,23 +5,23 @@ namespace Quic{
     
     //Defination
     //数据字段定义选项
-    export interface DataFieldOpts {
+    export interface DataFieldOpts  {
         //字段名
         name?:string;
-        // 数据类型 默认是string
-        dataType?:string;
-        
-       
-        // 验证规则集
-        validations?:{[index:string]:any};
         // 数据映射路径
         mappath?:string;
+    }
+    export interface DataFieldDefs extends DataFieldOpts{
+        // 数据类型 默认是string
+        dataType?:string;
+        // 验证规则集
+        validations?:{[index:string]:any};
         
     }
 
-    export interface IDataField extends DataFieldOpts{
+    export interface IDataField extends DataFieldDefs{
         dataValidate : (value:any,state?:any)=>string;
-        opts:any;
+        defs:DataFieldDefs;
     }
     
     export class DataField implements IDataField{
@@ -29,20 +29,20 @@ namespace Quic{
         dataType:string;
         dataPath:string;
         validations:{[index:string]:any};
-        opts:any;
+        defs:DataFieldDefs;
        
         validate : (value:any,state?:any)=>string;
-        constructor(opts:DataFieldOpts){
+        constructor(defs:DataFieldDefs){
             //字段名,去掉两边的空格
-            this.name = opts.name?opts.name.replace(trimRegx,""):undefined;
+            this.name = defs.name?defs.name.replace(trimRegx,""):undefined;
             //必须有字段名
             if(!this.name) throw new Error("name is required for DataField");
             //数据类型，默认是string
-            this.dataType = opts.dataType?(opts.dataType.replace(trimRegx,"")||undefined):"string";
+            this.dataType = defs.dataType?(defs.dataType.replace(trimRegx,"")||undefined):"string";
             // 验证信息
-            this.validations = opts.validations;
+            this.validations = defs.validations;
             // 原始定义
-            this.opts = opts;
+            this.defs = defs;
             //验证跟数据验证是同一个函数
             this.validate = this.dataValidate;
         }

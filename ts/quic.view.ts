@@ -5,6 +5,18 @@
 /// <reference path="quic.datafield.ts" />
 
 namespace Quic{
+    export interface ViewOpts{
+       
+        name?:string;
+        group?:string;
+        permission?:string;
+        
+    }
+    export interface ViewDefs extends ViewOpts{
+        viewType?:string;
+       
+    }
+
     export interface IViewBuilder{
         //只是可见，没有input元素跟着
         visible:(view:IView,data:{[index:string]:any})=>HTMLElement;
@@ -19,22 +31,20 @@ namespace Quic{
         // 获取到该view上的值。
         getViewValue(view:IView,element:HTMLElement):any;
     }
-    export interface ViewOpts{
-        name?:string;
-        viewType?:string;
-        group?:string;
-        permission?:string;
-    }
+
+    
     export interface ViewCss{
         visible():string;
         hidden():string;
         readonly():string;
         editable():string;
+        toString():string;
     }
-    export interface IView extends ViewOpts{
-        CSS?:ViewCss;
-        builder?:IViewBuilder;
-        container:IViewset;
+    export interface IView extends ViewDefs{
+        
+        viewBuilder:IViewBuilder;
+        Css?:ViewCss;
+        container?:IViewset;
         viewValue(element:HTMLElement,value?:any):any;
         
         createElement(value:any,permission:string,validateRequired?:boolean,state?:any):HTMLElement;
@@ -70,6 +80,7 @@ namespace Quic{
             this.editable =():string=>css;
             return css;
         };
+        toString:()=>string=():string=>this.base;
 
     }
 

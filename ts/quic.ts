@@ -1,6 +1,6 @@
 
 export class Quic{
-    constructor(opts:any){
+    constructor(Opts:any){
 
     }
     static nextGNo():number{

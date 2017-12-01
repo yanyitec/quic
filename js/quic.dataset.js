@@ -3,8 +3,3 @@
 /// <reference path="quic.datafield.ts" />
 /// <reference path="quic.view.ts" />
 /// <reference path="quic.field.ts" />
-
-namespace Quic{
-    
-    
-}

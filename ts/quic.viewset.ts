@@ -6,14 +6,18 @@
 
 namespace Quic{
     export interface ViewsetOpts extends ViewOpts{
+
+    }
+    export interface ViewsetDefs extends ViewsetOpts,ViewDefs{
         
     }
-    export interface IViewset extends IView,ViewsetOpts{
+    export interface ILocalizable{
         //多语言文本处理
         _T(text:string,mustReturn?:boolean);
-        //数据访问器
-        accessorFactory:DataAccessorFactory;
-
-        fieldValue(fieldOpts:FieldOpts,fieldElement:HTMLElement,data:any,value?:any):any;
+    }
+    export interface IViewset extends IView,ILocalizable,ViewsetDefs{
+        
+        
+        
     }
 }

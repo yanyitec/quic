@@ -11,40 +11,46 @@ namespace Quic{
         css?:string;
         permission?:string;
     }
+    export interface FieldDefs extends DataFieldDefs,ViewDefs,FieldOpts{
+        
+    }
+    export interface IField extends FieldDefs{
+        fieldset:IFieldset;
+    }
     
 
     export class Field extends DataField implements IView{
         viewType:string;
-        CSS:ViewCss;
+        Css:ViewCss;
         css:string;
-        container:IViewset;
-        builder:IViewBuilder;
+        fieldset:IFieldset;
+        viewBuilder:IViewBuilder;
         text:string;
         group:string;
         permission:string;
-        constructor(container:IViewset,opts:FieldOpts){
-            super(opts);
-            this.container = container;
-            this.text = opts.text;
-            if(!(this.viewType = opts.viewType)){this.viewType = this.dataType;}
-            if(!(this.builder = viewBuilders[this.viewType]))
+        constructor(dataset:IFieldset,defs:FieldDefs){
+            super(defs);
+            this.fieldset = dataset;
+            this.text = defs.text;
+            if(!(this.viewType = defs.viewType)){this.viewType = this.dataType;}
+            if(!(this.viewBuilder = viewBuilders[this.viewType]))
                 throw new Error("Invalid viewType:" + this.viewType + ". viewBuilder is not found.");
 
             let css = "field " + this.viewType + " " + this.name;
-            if(opts.css) css +=" " + opts.css;
-            if(opts.permission) this.permission = opts.permission;
-            this.CSS = new ViewCSS(css);
+            if(defs.css) css +=" " + defs.css;
+            if(defs.permission) this.permission = defs.permission;
+            this.Css = new ViewCSS(css);
         }
 
               
         
         viewValue(element:HTMLElement,value?:any):any{
-            if(value===undefined) return this.builder.getViewValue(this,element);
-            this.builder.getViewValue(this,element);
+            if(value===undefined) return this.viewBuilder.getViewValue(this,element);
+            this.viewBuilder.getViewValue(this,element);
             return this;
         }
         viewValidate(element?:HTMLElement,state?:any):string{
-            let value = this.builder.getViewValue(this,element);
+            let value = this.viewBuilder.getViewValue(this,element);
             let validType:string =  this.dataValidate(value,state);
             if(validType){
                 let wrapper:HTMLElement = element.parentNode as HTMLElement;
@@ -79,7 +85,7 @@ namespace Quic{
         
 
         createElement(data:{[index:string]:any},permission:string,validateRequired?:boolean):HTMLElement{
-            let creator = (this.builder as any)[permission];
+            let creator = (this.viewBuilder as any)[permission];
             if(!creator) throw new Error("Invalid permission value:" + permission);
             let cssor = (this.css as any)[permission];
             if(!cssor) throw new Error("Invalid permission value:" + permission);
@@ -89,13 +95,13 @@ namespace Quic{
             element.className = cssor();
             if(permission==="hidden")element.style.display="none";
             let id = "quic_input_"+(Quic as any).nextGNo();
-            let text = this.text || this.container._T(this.text) || this.container._T(this.name);
+            let text = this.text || this.fieldset._T(this.text) || this.fieldset._T(this.name);
             let required = (this.validations && this.validations.required)?"<ins class='field-required'>*</ins>":"";
             element.innerHTML = `<label class="field-caption" for="${id}">${text}${required}</label>`;
             let input = creator(this,data);let validInput = input["quic-valid-input"]||input;
             input.name = this.name;validInput.id= id;
             element.appendChild(input);
-            let validInfos = this.validationInfos(this.container._T);
+            let validInfos = this.validationInfos(this.fieldset._T);
             if(validateRequired===true && permission==="editable" && validInfos){
                 let info = document.createElement("label") as HTMLLabelElement;
                 (info as any).for = id;

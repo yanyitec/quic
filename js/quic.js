@@ -1,5 +1,5 @@
 export class Quic {
-    constructor(opts) {
+    constructor(Opts) {
     }
     static nextGNo() {
         if (id_seed++ > 2100000000)
