@@ -23,6 +23,16 @@ namespace Quic{
          * @memberof Env
          */
         navigate(url:string,complete:(doc?:HTMLDocument)=>void);
+
+        /**
+         * 调用ajax方法
+         * 
+         * @param {*} opts 
+         * @returns {*} 
+         * @memberof Env
+         */
+        ajax(opts:any):any;
+
         /**
          * 弹出一个警告框，icon为感叹号
          * 
@@ -1048,13 +1058,13 @@ namespace Quic{
          */
         getEventListener(evtName:string,viewname?:string):any;
         /**
-         * 根据permission获取呈现器
+         * 根据viewType获取呈现器
          * 
-         * @param {string} permission 
+         * @param {string} viewType 
          * @returns {IRenderer} 
          * @memberof IModule
          */
-        findRenderer(permission:string):IRenderer;
+        findRenderer(viewType:string):IRenderer;
 
 
         
