@@ -5,25 +5,7 @@
 /// <reference path="quic.fieldset.ts" />
 
 namespace Quic{
-    export interface ViewsetOpts extends ViewOpts{
-        fieldsetName?:string;
-        //要包含的域s表达式或域s配置
-        includes?:string | {[fieldname:string]:FieldOpts};
-        //要排除的域的名字
-        excludes?:string | Array<string>;
-        //初始化用到的数据
-        initData?:{[index:string]:any};
-
-        initing?(container:IViewset,fieldset:IFieldset,opts:ViewsetOpts);
-    }
     
-    
-    export interface IViewset extends IView,ViewsetOpts{
-        opts:ViewsetOpts;
-        fieldset:IFieldset;
-        views:{[index:string]:IView};      
-        currentData:  {[index:string]:any};
-    }
 
     export class Viewset extends View implements IViewset{
        

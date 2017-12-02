@@ -7,7 +7,7 @@
 
 
 namespace Quic{
-    export class TextBuilder implements IViewBuilder{
+    export class TextBuilder implements IViewRenderer{
         constructor(){}
         //只是可见，没有input元素跟着
         visible(view:IView):HTMLElement{

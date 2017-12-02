@@ -1,131 +1,239 @@
 /// <reference path="quic.ts" />
 /// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
-/// <reference path="quic.datafield.ts" />
 /// <reference path="quic.view.ts" />
 var Quic;
 (function (Quic) {
-    class Field extends Quic.DataField {
-        constructor(dataset, defs) {
-            super(defs);
-            this.fieldset = dataset;
-            this.text = defs.text;
-            if (!(this.viewType = defs.viewType)) {
-                this.viewType = this.dataType;
+    class Field {
+        constructor(fieldset, opts) {
+            this.fieldset = fieldset;
+            this.opts = opts;
+            //字段名,去掉两边的空格
+            this.name = opts.name ? opts.name.replace(Quic.trimRegx, "") : undefined;
+            //必须有字段名
+            if (!this.name)
+                throw new Error("name is required for DataField");
+            //数据类型，默认是string
+            this.dataType = opts.dataType ? (opts.dataType.replace(Quic.trimRegx, "") || "string") : "string";
+            //视图类型&视图构造器
+            this.viewType = opts.viewType ? (opts.viewType.replace(Quic.trimRegx, "") || this.dataType) : this.dataType;
+            this.viewRenderer = this.findViewRenderer(this.viewType);
+            if (!this.viewRenderer)
+                return Quic.env.throw("Invalid viewType", this.viewType);
+            this.Css = new Quic.ViewCSS(this.css = opts.css);
+            this.permission = opts.permission; //;|| this.fieldset;
+            // mappath
+            this.mappath = opts.mappath ? opts.mappath.replace(Quic.trimRegx, "") : undefined;
+            this.mappedValue = mappedValue;
+            this.mappedValue(null);
+        }
+        findViewRenderer(viewType) {
+            return null;
+        }
+        getAccessor(mappath) {
+            return this.fieldset.accessorFactory.cached(mappath);
+        }
+        hasValidation(validType) {
+            return this.validations && this.validations[validType];
+        }
+        validationInfos(localization) {
+            //没有定义验证规则，没有验证信息
+            if (!this.validations) {
+                this.validationInfos = () => undefined;
+                return;
             }
-            if (!(this.viewBuilder = Quic.viewBuilders[this.viewType]))
-                throw new Error("Invalid viewType:" + this.viewType + ". viewBuilder is not found.");
-            let css = "field " + this.viewType + " " + this.name;
-            if (defs.css)
-                css += " " + defs.css;
-            if (defs.permission)
-                this.permission = defs.permission;
-            this.Css = new Quic.ViewCSS(css);
-        }
-        viewValue(element, value) {
-            if (value === undefined)
-                return this.viewBuilder.getViewValue(this, element);
-            this.viewBuilder.getViewValue(this, element);
-            return this;
-        }
-        viewValidate(element, state) {
-            let value = this.viewBuilder.getViewValue(this, element);
-            let validType = this.dataValidate(value, state);
-            if (validType) {
-                let wrapper = element.parentNode;
-                while (wrapper) {
-                    if (wrapper["quic-field"])
-                        break;
-                }
-                if (wrapper) {
-                    let ul = wrapper["quic-validation-infos"];
-                    let showErrorInfo = (validType) => {
-                        for (let i = 0, j = ul.childNodes.length; i < j; i++) {
-                            let li = ul.childNodes[i];
-                            if (li.name === validType)
-                                li.className = "error";
-                            else
-                                li.className = "";
-                        }
-                    };
-                    let dom = Quic.dom;
-                    if (validType) {
-                        showErrorInfo(validType);
-                        dom.addClass(wrapper, "validate-error").removeClass(wrapper, "validate-success");
+            let msgs = {};
+            let prefix = Quic.opts["validation-message-prefix"] || "valid-";
+            for (var validType in this.validations) {
+                let validator = validators[validType];
+                if (validator) {
+                    if (validType === "string" || validType === "text" || validType === "str")
+                        validType = "length";
+                    else if (validType === "number")
+                        validType = "decimal";
+                    let messageKey = prefix + validType;
+                    let msg = localization._T(messageKey);
+                    let parameter = this.validations[validType];
+                    if (!parameter) {
+                        msgs[validType] = msg;
                     }
                     else {
-                        dom.removeClass(wrapper, "validate-error");
-                        if (validType === null) {
-                            dom.addClass(wrapper, "validate-processing");
+                        let t = typeof parameter;
+                        let submsg = "";
+                        if (typeof parameter === "object") {
+                            for (var p in parameter) {
+                                let subkey = messageKey + p;
+                                let subtxt = localization._T(subkey, false);
+                                if (subtxt) {
+                                    if (submsg)
+                                        submsg += ",";
+                                    submsg += subtxt;
+                                }
+                            }
                         }
-                        else
-                            dom.addClass(wrapper, "validate-success");
+                        else if (t === "string") {
+                            submsg = localization._T(parameter.toString());
+                        }
+                        msgs[validType] = msg + (submsg ? ":" + submsg : "");
                     }
                 }
             }
-            return validType;
-        }
-        createElement(data, permission, validateRequired) {
-            let creator = this.viewBuilder[permission];
-            if (!creator)
-                throw new Error("Invalid permission value:" + permission);
-            let cssor = this.css[permission];
-            if (!cssor)
-                throw new Error("Invalid permission value:" + permission);
-            let dom = Quic.dom;
-            let element = dom.createElement("div");
-            element["quic-field"] = this;
-            element.className = cssor();
-            if (permission === "hidden")
-                element.style.display = "none";
-            let id = "quic_input_" + Quic.nextGNo();
-            let text = this.text || this.fieldset._T(this.text) || this.fieldset._T(this.name);
-            let required = (this.validations && this.validations.required) ? "<ins class='field-required'>*</ins>" : "";
-            element.innerHTML = `<label class="field-caption" for="${id}">${text}${required}</label>`;
-            let input = creator(this, data);
-            let validInput = input["quic-valid-input"] || input;
-            input.name = this.name;
-            validInput.id = id;
-            element.appendChild(input);
-            let validInfos = this.validationInfos(this.fieldset._T);
-            if (validateRequired === true && permission === "editable" && validInfos) {
-                let info = document.createElement("label");
-                info.for = id;
-                info.className = "field-valid-infos";
-                element.appendChild(info);
-                let validTick;
-                let ul = dom.createElement("ul");
-                ul.className = "validation-infos";
-                for (let n in validInfos) {
-                    let li = dom.createElement("li");
-                    li.name = n;
-                    li.innerHTML = validInfos[n];
-                    ul.appendChild(li);
-                }
-                element["quic-validation-infos"] = ul;
-                let valid = () => {
-                    if (validTick)
-                        clearTimeout(validTick);
-                    validTick = 0;
-                    this.viewValidate(input);
-                };
-                let delayValid = () => {
-                    if (validTick)
-                        clearTimeout(validTick);
-                    validTick = setTimeout(() => {
-                        if (validTick)
-                            clearTimeout(validTick);
-                        validTick = 0;
-                        this.viewValidate(input);
-                    }, 200);
-                };
-                dom.attach(validInput, "keydown", delayValid);
-                dom.attach(validInput, "keyup", delayValid);
-                dom.attach(validInput, "change", valid);
-                dom.attach(validInput, "blur", valid);
+            for (let n in msgs) {
+                this.validationInfos = () => msgs;
+                return msgs;
             }
-            return element;
+            this.validationInfos = () => undefined;
+            return;
+        }
+        validate(value, state) {
+            let validations = this.validations;
+            if (!validations) {
+                return;
+            }
+            let hasError = false;
+            //let value = this.value(data);
+            let required_v = validations["required"];
+            if (required_v) {
+                let val = value ? value.toString().replace(Quic.trimRegx, "") : "";
+                if (!val) {
+                    return "required";
+                }
+            }
+            let type_v = validations[this.dataType];
+            let typeValidator = validators[this.dataType];
+            if (typeValidator) {
+                if (typeValidator(value, type_v, this, state) === false) {
+                    return this.dataType.toString();
+                }
+            }
+            let result;
+            for (var validType in validations) {
+                if (validType === "required" || validType === this.dataType)
+                    continue;
+                let validator = validators[validType];
+                if (!validator) {
+                    Quic.env.warn("unregistered validation type:" + validType);
+                    continue;
+                }
+                let validParameter = validations[validType];
+                let rs = validator(value, validParameter, this, state);
+                if (rs === false)
+                    return validType;
+                if (rs !== true)
+                    result = null;
+            }
+            return result;
         }
     }
     Quic.Field = Field;
+    function mappedValue(data, value) {
+        let mappath = this.mappath;
+        if (!mappath || mappath === this.name) {
+            this.mappedValue = function (data, value) {
+                if (value === undefined)
+                    return data ? data[this.name] : undefined;
+                if (data)
+                    data[this.name] = value;
+                return this;
+            };
+        }
+        else {
+            this.mappedValue = this.getAccessor(mappath);
+        }
+        return this.mappedValue(data, value);
+    }
+    Quic.mappedValue = mappedValue;
+    let validators = {};
+    validators["length"] = (value, parameter, field, state) => {
+        let val = (value === undefined || value === null) ? 0 : value.toString().length;
+        if (parameter && parameter.min && parameter.min > val)
+            return false;
+        if (parameter && parameter.max && parameter.max < val)
+            return false;
+        return true;
+    };
+    validators["string"] = validators["text"] = validators["length"];
+    validators["int"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined)
+            return;
+        value = value.toString().replace(Quic.trimRegx, "");
+        if (!value)
+            return;
+        if (!Quic.intRegx.test(value))
+            return false;
+        let val = parseInt(value);
+        if (parameter && parameter.min && parameter.min > val)
+            return false;
+        if (parameter && parameter.max && parameter.max < val)
+            return false;
+        return true;
+    };
+    validators["decimal"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined)
+            return;
+        value = value.toString().replace(Quic.trimRegx, "");
+        if (!value)
+            return;
+        let match = value.match(Quic.decimalRegx);
+        if (!match)
+            return false;
+        if (parameter && parameter.ipart && match[0].replace(/,/g, "").length > parameter.ipart)
+            return false;
+        if (parameter && parameter.fpart && match[1] && match[1].length - 1 > parameter.fpart)
+            return false;
+        let val = parseFloat(value);
+        if (parameter && parameter.min && parameter.min > val)
+            return false;
+        if (parameter && parameter.max && parameter.max < val)
+            return false;
+        return true;
+    };
+    validators["email"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined || /\s+/.test(value))
+            return;
+        if (value === undefined || value === null)
+            return null;
+        return Quic.emailRegx.test(value);
+    };
+    //
+    validators["url"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined || /\s+/.test(value))
+            return;
+        return Quic.urlRegx.test(value);
+    };
+    validators["regex"] = (value, parameter, field, state) => {
+        if (value === null || value === undefined)
+            return;
+        let reg;
+        try {
+            reg = new RegExp(parameter);
+        }
+        catch (ex) {
+            throw Error("parameter is invalid regex:" + parameter);
+        }
+        return reg.test(value);
+    };
+    validators["remote"] = (value, parameter, field, state) => {
+        throw new Error("Not implement");
+    };
+    Quic.langs = {
+        "valid-required": "必填",
+        "valid-length": "字符个数",
+        "valid-length-min": "至少{min}",
+        "valid-length-max": "最多{max}",
+        "valid-length-min-max": "{min}-{max}个",
+        "valid-int": "必须是整数",
+        "valid-int-min": "最小值为{min}",
+        "valid-int-max": "最大值为{max}",
+        "valid-int-min-max": "取值范围为{min}-{max}",
+        "valid-decimal": "必须是数字",
+        "valid-decimal-min": "最小值为{min}",
+        "valid-decimal-max": "最大值为{max}",
+        "valid-decimal-min-max": "取值范围为{min}-{max}",
+        "valid-decimal-ipart": "整数部分最多{min}位",
+        "valid-decimal-fpart": "小数部分最多{max}位",
+        "valid-email": "必须是电子邮件地址格式",
+        "valid-url": "必须是URL地址格式",
+        "valid-regex": "必须符合格式"
+    };
 })(Quic || (Quic = {}));

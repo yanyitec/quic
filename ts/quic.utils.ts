@@ -2,6 +2,12 @@ namespace Quic{
     export let opts={
         "validation-message-prefix":"valid-"
     };
+    export function nextGNo():number{
+        if(id_seed++>2100000000) id_seed= -2100000000;
+        return id_seed;
+    }
+    let id_seed:number = 10000;
+
     export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
     export let trimRegx:RegExp = /(^\s+)|(\s+$)/g;
     export let urlRegx :RegExp = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;

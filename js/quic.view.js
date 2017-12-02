@@ -2,9 +2,72 @@
 /// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
 /// <reference path="quic.dom.ts" />
-/// <reference path="quic.datafield.ts" />
 var Quic;
 (function (Quic) {
+    class View {
+        constructor(container, field, opts) {
+            this.container = container;
+            this.field = field;
+            this.opts = opts;
+            this.name = opts.name || field.name;
+            //viewType && viewBuilder
+            this.viewType = opts.viewType;
+            if (this.viewType === field.viewType)
+                this.viewRenderer = field.viewRenderer;
+            if (!this.viewRenderer)
+                this.viewRenderer = this.field.findViewRenderer(this.viewType);
+            if (!this.viewRenderer)
+                return Quic.env.throw("Invalid viewType", this.viewType);
+            // css
+            if (!opts.css || opts.css === field.css) {
+                this.css = opts.css;
+                this.Css = field.Css;
+            }
+            else {
+                this.Css = new ViewCSS(this.css = opts.css);
+            }
+            //permission
+            this.permission = opts.permission || field.permission || container.permission;
+            if (this.permission === "novalidate") {
+                this.permission = "editable";
+            }
+            else {
+                this.validatable = field;
+            }
+            let mappath = opts.mappath ? opts.mappath.replace(Quic.trimRegx, "") : undefined;
+            if (mappath !== field.mappath) {
+                this.mappath = mappath;
+                this.mappedValue = Quic.mappedValue;
+            }
+            else {
+                this.mappath = field.mappath;
+                this.mappedValue = field.mappedValue;
+            }
+        }
+        value(value) {
+            if (value === undefined)
+                return this.viewRenderer.getValue(this);
+            this.viewRenderer.setValue(this, value);
+            return this;
+        }
+        getAccessor(mappath) {
+            return this.field.getAccessor(mappath);
+        }
+        element() {
+            if (this._element)
+                return this._element;
+            let creator = this.viewRenderer[this.permission];
+            if (!creator)
+                throw new Error("Invalid permission value:" + this.permission);
+            creator(this);
+        }
+        validate() {
+            if (this.validatable) {
+                return this.validatable.validate(this.value(), this);
+            }
+        }
+    }
+    Quic.View = View;
     class ViewCSS {
         constructor(base) {
             this.visible = () => {
@@ -40,68 +103,5 @@ var Quic;
         ;
     }
     Quic.ViewCSS = ViewCSS;
-    Quic.viewBuilders = {};
-    class TextBuilder {
-        constructor() { }
-        //只是可见，没有input元素跟着
-        visible(view, value) {
-            let element = Quic.dom.createElement("input");
-            element.innerHTML = value === undefined || value === null ? "" : value;
-            return element;
-        }
-        //隐藏，但是有input元素
-        hidden(view, value) {
-            let element = Quic.dom.createElement("input");
-            element.type = "hidden";
-            element.value = value === undefined || value === null ? "" : value;
-            return element;
-        }
-        //只读，不能修改，但是有input元素
-        readonly(view, value) {
-            let element = Quic.dom.createElement("span");
-            value = value === undefined || value === null ? "" : value;
-            element.innerHTML = `<span>${value}</span><input type="hidden" name="${view.name}" />`;
-            element.lastChild.value = value;
-            return element;
-        }
-        // 可编辑
-        editable(view, value) {
-            let element = Quic.dom.createElement("input");
-            element.type = "text";
-            element.value = value === undefined || value === null ? "" : value;
-            return element;
-        }
-        // 设置View的值，并让view反映该值。
-        setViewValue(view, element, value) {
-            if (element.tagName === "INPUT") {
-                element.value = value;
-            }
-            else {
-                element.lastChild.value = value;
-            }
-        }
-        // 获取到该view上的值。
-        getViewValue(view, element) {
-            if (element.tagName === "INPUT") {
-                return element.value;
-            }
-            else {
-                return element.lastChild.value;
-            }
-        }
-    }
-    Quic.TextBuilder = TextBuilder;
-    ;
-    Quic.viewBuilders.text = Quic.viewBuilders.number = Quic.viewBuilders.int = Quic.viewBuilders.string = new TextBuilder();
-    class TextareaBuilder extends TextBuilder {
-        constructor() {
-            super();
-            this.editable = (view, value) => {
-                let element = Quic.dom.createElement("textarea");
-                element.value = value === undefined || value === null ? "" : value;
-                return element;
-            };
-        }
-    }
-    Quic.viewBuilders.textarea = new TextareaBuilder();
+    Quic.viewRenderers = {};
 })(Quic || (Quic = {}));

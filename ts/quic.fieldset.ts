@@ -1,11 +1,10 @@
 /// <reference path="quic.ts" />
 /// <reference path="quic.utils.ts" />
-/// <reference path="quic.datafield.ts" />
 /// <reference path="quic.field.ts" />
 namespace Quic{
     export interface FieldsetDefs {
         name?:string;
-        fields:{[index:string]:FieldDefs};
+        fields:{[index:string]:FieldOpts};
     }
     export interface FieldsetOpts extends FieldsetDefs{
         accessorFactory?:AccessorFactory;
@@ -14,6 +13,7 @@ namespace Quic{
 
     export interface IFieldset extends  ILocalizable{
         opts:FieldsetOpts;
+        fields:{[index:string]:IField};
         //数据访问器
         accessorFactory:AccessorFactory;
         fieldValue(fieldOpts:FieldOpts,fieldElement:HTMLElement,data:any,value?:any):any;
@@ -25,7 +25,7 @@ namespace Quic{
         opts:FieldsetOpts;
         defs:FieldsetDefs;
         localization:ILocalizable;
-        viewBuilder:IViewBuilder;
+        viewBuilder:IViewRenderer;
         //数据访问器
         accessorFactory:AccessorFactory;
         
@@ -59,6 +59,7 @@ namespace Quic{
        
 
         fieldValue(fieldOpts:FieldOpts,fieldElement:HTMLElement,data:any,value?:any):any{
+            /*
             let field :Field;
             let accessor :(data:{[index:string]:any},value?:any)=>any;;
             if(fieldOpts.mappath&& fieldOpts.mappath!==field.name){
@@ -70,70 +71,18 @@ namespace Quic{
                     return data?(accessor?accessor(data):data[fieldOpts.name]):undefined;
                 }else {
                     //从element中获取
-                    value = field.viewBuilder.getViewValue(field,fieldElement); 
+                    value = field.viewRenderer.getValue(field); 
                     if(data){
                         if(accessor) accessor(data,value); else data[fieldOpts.name] = value;
                     }
                     return value;
                 }
             }else {
-                if(fieldElement) field.viewBuilder.setViewValue(field,fieldElement,value);
+                if(fieldElement) field.viewRenderer.setValue(field,value);
                 if(data) {if(accessor) accessor(data,value); else data[fieldOpts.name] = value;}
                 return this;
-            }
+            }*/
         }
     }
-    export interface FieldOptsCollectionOpts {
-        includes?:string;
-        excludes?:string | Array<string>;
-        defaultPermssion:string;
-    }
-
-
     
-    export function parseFieldOptsSet(includeExpr:string,excludes:Array<string>,defaultPermssion:string):{[index:string]:FieldOpts}{
-        let destFieldOptsSet = this.fields = {};
-        
-        let includes :{[index:string]:FieldOpts};
-        //id，base[name:readonly,password:editable],gender:hidden
-        includes={};
-        let groupname;
-        let groupCount=0;
-        let includeExprs = includeExpr.split(",");
-        for(let i =0 ,j= includeExprs.length;i<j;i++){
-            let expr:string = includeExprs[i].replace(trimRegx,"");
-            let name:string;let permission :string;
-            if(!expr) continue;
-            let at:number = expr.indexOf("[");
-            let startAt:number = 0;
-            if(at>=0){
-                if(groupname!==undefined)throw new Error(`invalid includes expression:${Opts.includes}. meet[, but the previous [ is not close. lack of ]?`);
-                groupname = expr.substr(0,at);startAt = at+1;
-                groupCount++;
-            }else at = 0;
-            at = expr.indexOf(":",startAt);
-            if(at>=0){
-                name = expr.substr(0,at).replace(trimRegx,"");
-                permission = expr.substr(at+1).replace(trimRegx,"");
-                if(!permission) throw new Error(`invalid includes expression:${Opts.includes}. meet :, but permission is empty.`);;
-            } else name = expr.substr(startAt).replace(trimRegx,"");
-            let endGroup:boolean = false;
-            if(name[name.length-1]==="]"){
-                if(!groupname)throw new Error(`invalid includes expression:${Opts.includes}. meet ], but not matched [. lack of [?`);;
-                endGroup = true;
-                name = name.substr(0,name.length-1);
-            }
-            if(!name)throw new Error(`invalid includes expression:${Opts.includes}. Some name is empty.`);
-            if(excludes && array_index(excludes,name)>=0) continue;
-            
-            let fieldOpts :FieldOpts={name:name};
-            fieldOpts.permission = permission|| Opts.defaultPermssion;
-            if(groupname!==undefined){
-                if(groupname=="") groupname = ' ' + groupCount;
-                fieldOpts.group = groupname;
-            }
-            destFieldOptsSet[name] = fieldOpts;
-        }
-        return destFieldOptsSet;
-    }
 }

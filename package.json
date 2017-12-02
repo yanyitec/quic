@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/yanyitec/quic/issues"
   },
-  "homepage": "https://github.com/yanyitec/quic#readme"
+  "homepage": "https://github.com/yanyitec/quic#readme",
+  "dependencies": {
+    "tslint": "^5.8.0"
+  }
 }

@@ -1,17 +1,16 @@
+/// <reference path="quic.ts" />
+/// <reference path="quic.utils.ts" />
+/// <reference path="quic.dom.ts" />
+/// <reference path="quic.view.ts" />
 /// <reference path="quic.field.ts" />
+/// <reference path="quic.fieldset.ts" />
+/// <reference path="quic.viewset.ts" />
 var Quic;
 (function (Quic) {
-    var Form = /** @class */ (function () {
-        function Form() {
-        }
-        Form.prototype.get_data = function () {
-            return null;
-        };
-        Form.prototype.waiting = function (msg) { };
-        Form.prototype._T = function (key) {
-            return key;
-        };
-        return Form;
-    }());
-    Quic.Form = Form;
+    function createForm(view) {
+        let form = Quic.dom.createElement("div");
+        var includes = view.includes || view.fieldset.
+        ;
+    }
+    //viewRenderers.form;
 })(Quic || (Quic = {}));

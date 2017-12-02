@@ -4,40 +4,60 @@
 /// <reference path="quic.dom.ts" />
 
 namespace Quic{
-    export interface ViewOpts{
-       
-        name?:string;
-        viewType?:string;
-        css?:string;
-        text?:string;
-        group?:string;
-        permission?:string;
+    export class ViewCSS implements IViewCSS{
+        constructor(viewOpts:ViewOpts){
+            this.raw = viewOpts.css;
+            //this.base = base;
+        }
+        raw:string;
+        base:string;
         
-        mappath?:string;
+        
+        css(permission?:string):string{
+           let _this:any = this;
+           let fn = _this[permission];
+           return fn?fn.call(this):this.general();
+        };
+        general():string{
+            let css = this.raw?this.base + " " + this.raw:this.base ;
+            this.general =():string=>css;
+            return css;
+        }
+        visible:()=>string=():string=>{
+            let css = this.base + " field-visible";
+            if(this.raw) css += " " + this.raw;
+            this.visible =():string=>css;
+            return css;
+        };
+        hidden:()=>string=():string=>{
+            let css = this.base + " field-hidden";
+            if(this.raw) css += " " + this.raw;
+            this.hidden =():string=>css;
+            return css;
+        };
+        readonly:()=>string=():string=>{
+            let css = this.base + " field-readonly";
+            if(this.raw) css += " " + this.raw;
+            this.readonly =():string=>css;
+            return css;
+        };
+        editable:()=>string=():string=>{
+            let css = this.base + " field-editable";
+            if(this.raw) css += " " + this.raw;
+            this.editable =():string=>css;
+            return css;
+        };
+        validatable:()=>string=():string=>{
+            let css = this.base + " field-validatable";
+            if(this.raw) css += " " + this.raw;
+            this.editable =():string=>css;
+            return css;
+        };
+        toString:()=>string=():string=>this.base;
+
     }
 
     
-
-    
-    export interface ViewCss{
-        visible():string;
-        hidden():string;
-        readonly():string;
-        editable():string;
-        toString():string;
-    }
-
-
-    export interface IView extends ViewOpts{
-        field?:IField;
-        viewBuilder:IViewBuilder;
-        Css?:ViewCss;
-        container?:IViewset;
-        mappedValue:(data:{[index:string]:any},value?:any)=>any;
-        value(value?:any):any;
-        element():HTMLElement;  
-        validatable?:IValidatable;
-    }
 
     export class View implements IView{
         name:string;
@@ -48,7 +68,7 @@ namespace Quic{
         mappath?:string;
         css?:string;
         Css?:ViewCss;
-        viewBuilder:IViewBuilder;
+        viewRenderer:IViewRenderer;
         container?:IViewset;
         validatable?:IValidatable;
         field:Field;
@@ -62,9 +82,9 @@ namespace Quic{
             this.name = opts.name || field.name;
             //viewType && viewBuilder
             this.viewType=opts.viewType;
-            if(this.viewType===field.viewType) this.viewBuilder = field.viewBuilder;
-            if(!this.viewBuilder) this.viewBuilder = this.field.findViewBuilder(this.viewType);
-            if(!this.viewBuilder) return env.throw("Invalid viewType",this.viewType);
+            if(this.viewType===field.viewType) this.viewRenderer = field.viewRenderer;
+            if(!this.viewRenderer) this.viewRenderer = this.field.findViewRenderer(this.viewType);
+            if(!this.viewRenderer) return env.throw("Invalid viewType",this.viewType);
             // css
             if(!opts.css || opts.css === field.css){
                 this.css = opts.css;
@@ -90,8 +110,8 @@ namespace Quic{
         }
         
         value(value?:any):any{
-            if(value===undefined) return this.viewBuilder.getValue(this);
-            this.viewBuilder.setValue(this,value);
+            if(value===undefined) return this.viewRenderer.getValue(this);
+            this.viewRenderer.setValue(this,value);
             return this;
         }
         
@@ -103,7 +123,7 @@ namespace Quic{
         element():HTMLElement{
             if(this._element) return this._element;
             
-            let creator : ICreateView = (this.viewBuilder as any)[this.permission];
+            let creator : IRednerView = (this.viewRenderer as any)[this.permission];
             if(!creator) throw new Error("Invalid permission value:" + this.permission);
             creator(this)
         }
@@ -118,58 +138,9 @@ namespace Quic{
 
     
 
-    export class ViewCSS implements ViewCss{
-        constructor(base:string){this.base = base;}
-        base:string;
-        css(permission?:string):string{
-           let _this:any = this;
-           let fn = _this[permission];
-           if(fn) return fn.call(this);
-           return this.base;
-        };
-        visible:()=>string=():string=>{
-            let css = this.base + " field-visible";
-            this.visible =():string=>css;
-            return css;
-        };
-        hidden:()=>string=():string=>{
-            let css = this.base + " field-hidden";
-            this.hidden =():string=>css;
-            return css;
-        };
-        readonly:()=>string=():string=>{
-            let css = this.base + " field-readonly";
-            this.readonly =():string=>css;
-            return css;
-        };
-        editable:()=>string=():string=>{
-            let css = this.base + " field-editable";
-            this.editable =():string=>css;
-            return css;
-        };
-        toString:()=>string=():string=>this.base;
-
-    }
-    export interface ICreateView{
-        (view:IView):HTMLElement;
-    }
     
-
-    export interface IViewBuilder{
-        //只是可见，没有input元素跟着
-        visible:ICreateView;
-        //隐藏，但是有input元素
-        hidden:ICreateView;
-        //只读，不能修改，但是有input元素
-        readonly:ICreateView;
-        // 可编辑
-        editable:ICreateView;
-        // 设置View的值，并让view反映该值。
-        setValue(view:IView,value:any):any;
-        // 获取到该view上的值。
-        getValue(view:IView):any;
-    }
     
-    export let viewBuilders: {[viewType:string]:IViewBuilder} ={};
+    
+    export let viewRenderers: {[viewType:string]:IViewRenderer} ={};
     
 }

@@ -4,22 +4,8 @@
 /// <reference path="quic.view.ts" />
 namespace Quic{
     
-    export interface FieldOpts extends ViewOpts{
-        //字段名
-        name?:string;
-        // 数据类型 默认是string
-        dataType?:string;
-        // 验证规则集
-        validations?:{[index:string]:any};
-
-        // 数据映射路径
-        mappath?:string;
-        
-    }
-    export interface IValidatable{
-        validate(value:any,state?:any):any;
-        //validationInfos(localization:ILocalizable):{[index:string]:string};
-    }
+    
+    
     
     export interface IField extends FieldOpts,IValidatable{
         fieldset:IFieldset;
@@ -30,10 +16,7 @@ namespace Quic{
         validationInfos(localization:ILocalizable);
         
     }
-    export interface ILocalizable{
-        //多语言文本处理
-        _T(text:string,mustReturn?:boolean);
-    }
+    
 
     export class Field implements IField {
         name:string;
@@ -51,7 +34,7 @@ namespace Quic{
         //字段集
         fieldset:IFieldset;
         // 视图创建器
-        viewBuilder:IViewBuilder;
+        viewRenderer:IViewRenderer;
         // 权限化的css
         Css:ViewCss;
         // 分组
@@ -74,8 +57,8 @@ namespace Quic{
             this.dataType = opts.dataType?(opts.dataType.replace(trimRegx,"")||"string"):"string";
             //视图类型&视图构造器
             this.viewType=opts.viewType?(opts.viewType.replace(trimRegx,"")||this.dataType):this.dataType;
-             this.viewBuilder = this.findViewBuilder(this.viewType);
-            if(!this.viewBuilder) return env.throw("Invalid viewType",this.viewType);
+             this.viewRenderer = this.findViewRenderer(this.viewType);
+            if(!this.viewRenderer) return env.throw("Invalid viewType",this.viewType);
             this.Css = new ViewCSS(this.css = opts.css);
             this.permission = opts.permission ;//;|| this.fieldset;
             // mappath
@@ -84,7 +67,7 @@ namespace Quic{
             this.mappedValue(null);
             
         }
-        findViewBuilder(viewType:string):IViewBuilder{
+        findViewRenderer(viewType:string):IViewRenderer{
             return null;
         }
 
