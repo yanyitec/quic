@@ -4,6 +4,7 @@ namespace Quic{
         
         alert(msg:string);
         confirm(msg:string);
+        throw:Function;
         error:Function;
         warn:Function;
     }

@@ -1,9 +1,6 @@
 /// <reference path="quic.ts" />
 /// <reference path="quic.utils.ts" />
 /// <reference path="quic.datafield.ts" />
-/// <reference path="quic.dataset.ts" />
-/// <reference path="quic.view.ts" />
-/// <reference path="quic.viewset.ts" />
 /// <reference path="quic.field.ts" />
 namespace Quic{
     export interface FieldsetDefs {
@@ -94,18 +91,15 @@ namespace Quic{
 
 
     
-    export function parseFieldOptsCollection(Opts:FieldOptsCollectionOpts):{[index:string]:FieldOpts}{
+    export function parseFieldOptsSet(includeExpr:string,excludes:Array<string>,defaultPermssion:string):{[index:string]:FieldOpts}{
         let destFieldOptsSet = this.fields = {};
-        let excludes:Array<string> = 
-            Opts.excludes
-                ?(typeof Opts.excludes ==="string"?Opts.excludes.split(","):Opts.excludes)
-                :undefined;
+        
         let includes :{[index:string]:FieldOpts};
         //id，base[name:readonly,password:editable],gender:hidden
         includes={};
         let groupname;
         let groupCount=0;
-        let includeExprs = Opts.includes.split(",");
+        let includeExprs = includeExpr.split(",");
         for(let i =0 ,j= includeExprs.length;i<j;i++){
             let expr:string = includeExprs[i].replace(trimRegx,"");
             let name:string;let permission :string;
