@@ -7,15 +7,7 @@ namespace Quic{
     
     
     
-    export interface IField extends FieldOpts,IValidatable{
-        fieldset:IFieldset;
-        opts:FieldOpts;
-        mappath?:string;
-        mappedValue:(data:{[index:string]:any},value?:any)=>any;
-        hasValidation(validType:string):boolean;
-        validationInfos(localization:ILocalizable);
-        
-    }
+    
     
 
     export class Field implements IField {
@@ -34,56 +26,72 @@ namespace Quic{
         //字段集
         fieldset:IFieldset;
         // 视图创建器
-        viewRenderer:IViewRenderer;
+        renderer:IRenderer;
         // 权限化的css
-        Css:ViewCss;
+        CSS:ViewCSS;
         // 分组
-        group:string;
+        group?:string;
+        // 位置
+        position?:string;
         //数据路径
         mappath?:string;
         //定义
         opts:FieldOpts;
+        //form构建时，不需要label
+        nolabel:boolean;
         
         mappedValue:(data:{[index:string]:any},value?:any)=>any;
+
+        accessFactory:IAccessFactory;
         
         constructor(fieldset:IFieldset,opts:FieldOpts){
             this.fieldset = fieldset;
             this.opts = opts;
+
             //字段名,去掉两边的空格
             this.name = opts.name?opts.name.replace(trimRegx,""):undefined;
+
             //必须有字段名
             if(!this.name) throw new Error("name is required for DataField");
+
             //数据类型，默认是string
             this.dataType = opts.dataType?(opts.dataType.replace(trimRegx,"")||"string"):"string";
+
             //视图类型&视图构造器
-            this.viewType=opts.viewType?(opts.viewType.replace(trimRegx,"")||this.dataType):this.dataType;
-             this.viewRenderer = this.findViewRenderer(this.viewType);
-            if(!this.viewRenderer) return env.throw("Invalid viewType",this.viewType);
-            this.Css = new ViewCSS(this.css = opts.css);
+            let viewType:string = this.viewType=opts.viewType?(opts.viewType.replace(trimRegx,"")||this.dataType):this.dataType;
+             this.renderer = this.fieldset.module.findRenderer(viewType);
+            if(!this.renderer) return env.throw("Invalid viewType",viewType);
+
+            //nolabel
+            if(viewType==="action" || viewType==="submit" || viewType==="reset" || viewType==="close" || viewType==="open" || viewType==="navigate"){
+                this.nolabel = true;
+            }else this.nolabel =opts.nolabel;
+            
+            //css 
+            this.css=opts.css?(opts.css.replace(trimRegx,"")||this.css):this.dataType;
+            this.CSS = new ViewCSS(this);
+            //permission
             this.permission = opts.permission ;//;|| this.fieldset;
+            this.position = opts.position;
             // mappath
             this.mappath =opts.mappath?opts.mappath.replace(trimRegx,""):undefined;
             this.mappedValue = mappedValue;
             this.mappedValue(null);
             
         }
-        findViewRenderer(viewType:string):IViewRenderer{
-            return null;
-        }
+        
 
-        getAccessor(mappath:string):(data:{[index:string]:any},value?:any)=>any{
-            return this.fieldset.accessorFactory.cached(mappath);
-        }
+        
 
-        hasValidation(validType:string):boolean{
-            return this.validations && this.validations[validType];
+        validationRule(validType:string):any{
+            return this.validations ?this.validations[validType]:undefined;
         }
               
         
-        validationInfos(localization:ILocalizable){
+        validationTips(localization:ITextLocalizable){
             //没有定义验证规则，没有验证信息
             if(!this.validations){
-                this.validationInfos = ()=>undefined;
+                this.validationTips = ()=>undefined;
                 return;
             }
             let msgs :{[index:string]:string}= {};
@@ -120,10 +128,10 @@ namespace Quic{
                 }
             }
             for(let n in msgs){
-                this.validationInfos = ()=>msgs;
+                this.validationTips = ()=>msgs;
                 return msgs;
             }
-            this.validationInfos = ()=>undefined;
+            this.validationTips = ()=>undefined;
             return;
         }
 

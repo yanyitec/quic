@@ -3,6 +3,13 @@ var Quic;
     Quic.opts = {
         "validation-message-prefix": "valid-"
     };
+    function nextGNo() {
+        if (id_seed++ > 2100000000)
+            id_seed = -2100000000;
+        return id_seed;
+    }
+    Quic.nextGNo = nextGNo;
+    let id_seed = 10000;
     Quic.arrRegx = /(?:\[\d+\])+$/g;
     Quic.trimRegx = /(^\s+)|(\s+$)/g;
     Quic.urlRegx = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
@@ -70,22 +77,23 @@ var Quic;
         return -1;
     }
     Quic.array_index = array_index;
-    class AccessorFactory {
+    class AccessFactory {
         constructor() {
             this.caches = {};
+            this.create = AccessFactory.create;
         }
         cached(dataPath) {
             let accessor = this.caches[dataPath];
             if (!accessor) {
-                accessor = this.caches[dataPath] = AccessorFactory.create(dataPath);
+                accessor = this.caches[dataPath] = AccessFactory.create(dataPath);
             }
             return accessor;
         }
         static cached(dataPath) {
-            return AccessorFactory.instance.cached(dataPath);
+            return AccessFactory.instance.cached(dataPath);
         }
     }
-    AccessorFactory.create = (dataPath) => {
+    AccessFactory.create = (dataPath) => {
         if (dataPath == "$") {
             return function (data, value) {
                 if (value === undefined)
@@ -111,8 +119,8 @@ var Quic;
         code += "var at;\nif(value===undefined){\n" + codes.getter_code + "\treturn data;\n}else{\n" + codes.setter_code + "\n}\n";
         return new Function("data", code);
     };
-    AccessorFactory.instance = new AccessorFactory();
-    Quic.AccessorFactory = AccessorFactory;
+    AccessFactory.instance = new AccessFactory();
+    Quic.AccessFactory = AccessFactory;
     function buildPropCodes(propname, dataPath, codes, isLast) {
         if (!propname)
             throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
@@ -182,7 +190,7 @@ var Quic;
             text = text.toString();
         //if(!data){ return text;}
         let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory = AccessorFactory.instance);
+        accessorFactory || (accessorFactory = AccessFactory.instance);
         return text.replace(regx, function (m) {
             let accessor;
             let expr = m[1];

@@ -2,12 +2,9 @@
 /// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
 /// <reference path="quic.dom.ts" />
-namespace Quic{
-    export interface ModuleOpts{
-        name:string;
-        url:string;
+var Quic;
+(function (Quic) {
+    class Module {
     }
-    export class Module{
-
-    }
-}
+    Quic.Module = Module;
+})(Quic || (Quic = {}));

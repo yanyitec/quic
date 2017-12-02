@@ -7,42 +7,24 @@
 namespace Quic{
     
 
-    export class Viewset extends View implements IViewset{
+    export class FieldsetView extends CompositeView implements FieldsetViewOpts, IFieldsetView{
        
         //字段集
         fieldset:IFieldset;
-        
-
-        views:{[index:string]:IView};
+        module :IModule;
 
         //要包含的域s表达式或域s配置
         includes?:{[fieldname:string]:FieldOpts};
         //要排除的域的名字
         excludes?:Array<string>;
         
-        
+        controller:IController;
         initData:{[index:string]:any};
         currentData:  {[index:string]:any};
 
-        constructor(container:IViewset,fieldset:IFieldset,opts:ViewsetOpts){
-            if(opts.initing) opts.initing.call(container,fieldset,opts);
-            super(container,null,opts);
-            this.container = container;
-            this.fieldset = fieldset;
-            
-            this.excludes = typeof opts.excludes ==="string"? opts.excludes.split(/\s*,\s*/g):opts.excludes; 
-            if(typeof opts.includes ==="string"){
-                this.includes = parseFieldOptsSet(opts.includes,this.excludes,this.permission);
-            }else{
-                this.includes = opts.includes;
-            }
-            this.initData = this.currentData = opts.initData;
-
-
-            
+        constructor(module:IModule,pomposition:ICompositeView,field:IField,opts:ViewOpts){
+            super(module,pomposition,field,opts);
         }
-        
-        
     }
     
     

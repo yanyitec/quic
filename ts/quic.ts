@@ -130,8 +130,9 @@ namespace Quic{
      */
     export interface IDisposable{
         ref_count?:number;
+        heart_beat?():void;
         dispose?():void;
-        aquire():void;
+        aquire?():void;
         release?():void;
     }
     
@@ -191,13 +192,39 @@ namespace Quic{
          * @memberof ViewOpts
          */
         permission?:string;
+        //位置 header_actions,footer_actions,footer_status;
+        position?:string;
         /**
+         * form构建时不要label
+         * 
+         * @type {boolean}
+         * @memberof ViewOpts
+         */
+        nolabel?:boolean;
+     }
+
+     /**
+      * 字段关联的视图选项
+      * 
+      * @export
+      * @interface FieldViewOpts
+      * @extends {ViewOpts}
+      */
+     export interface FieldViewOpts extends ViewOpts{
+         /**
          * 数据映射路径，其值来源/存储在data的那个位置
          * 
          * @type {string}
-         * @memberof ViewOpts
+         * @memberof FieldViewOpts
          */
         mappath?:string;
+        /**
+         * 该字段显示的icon
+         * 
+         * @type {string}
+         * @memberof FieldViewOpts
+         */
+        icon?:string;
      }
 
      /**
@@ -210,7 +237,7 @@ namespace Quic{
       * @extends {ViewOpts} 可当作视图选项来使用
       */
     
-      export interface FieldOpts extends ViewOpts{
+      export interface FieldOpts extends FieldViewOpts{
         /**
          * 数据类型 默认是string
          * 
@@ -331,6 +358,35 @@ namespace Quic{
          * @memberof IField
          */
         opts:FieldOpts;
+        /**
+         * 视图呈现器
+         * 
+         * @type {IRenderer}
+         * @memberof IField
+         */
+        renderer:IRenderer;
+        /**
+         * 默认的CSS
+         * 
+         * @type {ViewCSS}
+         * @memberof IField
+         */
+        CSS:ViewCSS;
+        /**
+         * 数据访问器工厂
+         * 
+         * @type {IAccessFactory}
+         * @memberof IField
+         */
+        accessFactory:IAccessFactory;
+        /**
+         * form构建时，不要label
+         * 
+         * @type {boolean}
+         * @memberof IField
+         */
+        nolabel?:boolean;
+
     }
 
     /**
@@ -396,8 +452,58 @@ namespace Quic{
          * @memberof IFieldset
          */
         module:IModule;
+        /**
+         * 数据访问器工厂
+         * 
+         * @type {AccessorFactory}
+         * @memberof IFieldset
+         */
+        accessFactory:IAccessFactory;
         //fieldValue(fieldOpts:FieldOpts,fieldElement:HTMLElement,data:any,value?:any):any;
     }
+    /**
+     * 数据访问器
+     * 
+     * @export
+     * @interface IDataAccess
+     */
+    export interface IDataAccess{
+        /**
+         * 
+         * 
+         * @param {{[index:string]:any}} data 数据对象
+         * @param {*} [value] 值。undefined=getter
+         * @returns {*} 
+         * @memberof IDataAccess
+         */
+        (data:{[index:string]:any},value?:any):any;
+    }
+    /**
+     * 访问器工厂
+     * 用于产生datapath访问器
+     * 
+     * @export
+     * @interface IAccessFactory
+     */
+    export interface IAccessFactory{
+        /**
+         * 创建数据访问器
+         * 
+         * @param {string} dataPath 数据路径
+         * @returns {IDataAccess} 该路径的数据访问器
+         * @memberof IAccessFactory
+         */
+        create(dataPath:string):IDataAccess;
+        /**
+         * 获取或创建数据访问器
+         * 
+         * @param {string} dataPath 数据路径
+         * @returns {IDataAccess}  该路径的数据访问器
+         * @memberof IAccessFactory
+         */
+        cached(dataPath:string):IDataAccess;
+    }
+    
 
      /**
       * 组合后的css
@@ -482,20 +588,8 @@ namespace Quic{
      * @extends {ViewOpts}
      */
     export interface IView extends ViewOpts{
-        /**
-         * 视图所属的视图集对象
-         * 
-         * @type {IViewset}
-         * @memberof IView
-         */
-        viewset?:IViewset;
-        /**
-         * 该视图是根据那个field来创建的
-         * 
-         * @type {IField}
-         * @memberof IView
-         */
-        field?:IField;
+        composition?:ICompositeView;
+       
         /**
          * 视图将要用到的css集合
          * 
@@ -536,34 +630,76 @@ namespace Quic{
         element():HTMLElement; 
     }
 
+    export interface IFieldView extends FieldViewOpts,IView{
+         /**
+         * 该视图是根据那个field来创建的
+         * 
+         * @type {IField}
+         * @memberof IFieldView
+         */
+        field?:IField;
+        mappath?:string;
+
+        /**
+         * 根据映射mappath，获取数据对象中的值
+         * 因为每个view中的mappath不一定一致
+         * 
+         * @param {{[index:string]:any}} data 
+         * @param {*} [value] 
+         * @returns {*} 
+         * @memberof IFieldView
+         */
+        mappedValue:(data:{[index:string]:any},value?:any)=>any;
+    }
+
+
+    /**
+     * 组合视图，该视图由其他view组合而成
+     * 
+     * @export
+     * @interface ICompositeView
+     * @extends {ViewOpts}
+     */
+    export interface ICompositeView extends ViewOpts,IView{
+        /**
+         * 构成该视图的
+         * 
+         * @type {{[fieldname:string]:IView}}
+         * @memberof ICompositeView
+         */
+        components:{[viewname:string]:IView};
+    }
+
+
+    
+
     /**
      * 视图集合选项。创建视图集时作为参数
      * 可以当作视图选项来用
      * @export
-     * @interface ViewsetOpts
+     * @interface FieldsetViewOpts
      * @extends {ViewOpts} 可以当作视图选项来用
      */
-    export interface ViewsetOpts extends ViewOpts{
-    
+    export interface FieldsetViewOpts extends ViewOpts{
         /**
          * //要包含的域s表达式或域s配置
          * 域表达式的例子: [id:hidden,name:validatable,pwd:validatable],person[gender:editable]
          * @type {(string | {[fieldname:string]:FieldOpts})}
-         * @memberof ViewsetOpts
+         * @memberof FieldsetViewOpts
          */
-        includes?:string | {[fieldname:string]:FieldOpts};
+        fields?:string | {[fieldname:string]:FieldOpts};
         /**
          * 要排除的字段/域的名字
          * 
          * @type {(string | Array<string>)}
-         * @memberof ViewsetOpts
+         * @memberof FieldsetViewOpts
          */
         excludes?:string | Array<string>;
         /**
          * //初始化数据
          * 
          * @type {{[index:string]:any}}
-         * @memberof ViewsetOpts
+         * @memberof FieldsetViewOpts
          */
         initData?:{[index:string]:any};
 
@@ -571,97 +707,60 @@ namespace Quic{
          * 获取/提交数据的url
          * 
          * @type {string}
-         * @memberof ViewsetOpts
+         * @memberof FieldsetViewOpts
          */
         url?:string;
         /**
          * 获取/提交数据用的方法GET/POST/PUT etc.
          * 
          * @type {string}
-         * @memberof ViewsetOpts
+         * @memberof FieldsetViewOpts
          */
         method?:string;
         
     }
+
+    
     
     /**
      * 视图集。里面有多个view
      * 
      * @export
-     * @interface IViewset
-     * @extends {IView}
-     * @extends {ViewsetOpts}
+     * @interface IFieldsetView
+     * @extends {FieldsetViewOpts}
+     * @extends {ICompositeView}
      */
-    export interface IViewset extends IView,ViewsetOpts{
+    export interface IFieldsetView extends FieldsetViewOpts,ICompositeView{
         /**
-         * 原始的视图集选项
+         * 控制器
          * 
-         * @type {ViewsetOpts}
-         * @memberof IViewset
+         * @type {IController}
+         * @memberof IFieldsetView
          */
-        opts:ViewsetOpts;
-        /**
-         * 该视图集由哪个字段集生成
-         * 
-         * @type {IFieldset}
-         * @memberof IViewset
-         */
-        fieldset:IFieldset;
-        /**
-         * 所属模块
-         * 
-         * @type {IModule}
-         * @memberof IViewset
-         */
-        module:IModule;
-        /**
-         * 视图集中的视图对象
-         * 
-         * @type {{[index:string]:IView}}
-         * @memberof IViewset
-         */
-        views:{[index:string]:IView}; 
+        controller:IController;
+        
         /**
          * 当前数据
          * 
          * @type {{[index:string]:any}}
-         * @memberof IViewset
+         * @memberof IFieldsetView
          */
         currentData:  {[index:string]:any};
         /**
-         * 父视图集,open的时候会产生
+         * 该视图集由哪个字段集生成
          * 
-         * @type {IViewset}
-         * @memberof IViewset
+         * @type {IFieldset}
+         * @memberof IFieldsetView
          */
-        parentview?:IViewset;
+        fieldset:IFieldset;
         /**
-         * 堆中前一个视图集
+         * 模块
          * 
-         * @type {IViewset}
-         * @memberof IViewset
+         * @type {IModule}
+         * @memberof IFieldsetView
          */
-        stack_prev:IViewset;
-        /**
-         * 视图堆栈栈底元素
-         * 
-         * @type {IViewset}
-         * @memberof IViewset
-         */
-        stack_bottom:IViewset;
-        /**
-         * 视图堆栈栈顶元素
-         * 
-         * @type {IViewset}
-         * @memberof IViewset
-         */
-        stack_top:IViewset;
-        /**
-         * 关闭该视图集
-         * 
-         * @memberof IViewset
-         */
-        close();
+        module:IModule;
+        
     }
 
     
@@ -805,47 +904,47 @@ namespace Quic{
         /**
          * 当前的viewset,creating之后才会有值
          * 
-         * @type {IViewset}
+         * @type {IFieldsetView}
          * @memberof IController
          */
-        viewset:IViewset;
+        viewset:IFieldsetView;
         /**
          * 创建视图集合前。
          * 作用: 有机会修改opts
          * 状态: element不可用,initData,currentData不可用
-         * @param {IViewset} parentview 父视图集
+         * @param {IFieldsetView} parentview 父视图集
          * @param {IFieldset} fieldset 用那个字段集合创建该viewset
-         * @param {ViewsetOpts} opts  创建参数
-         * @param {ViewsetOpts} creator 那个view出发的该创建
+         * @param {FieldsetViewOpts} opts  创建参数
+         * @param {FieldsetViewOpts} creator 那个view出发的该创建
          * @memberof IController
          */
-        creating?(parentview:IViewset,fieldset:IFieldset,opts:ViewsetOpts,creator?:IView);
+        creating?(parentview:IFieldsetView,fieldset:IFieldset,opts:FieldsetViewOpts,creator?:IView);
         /**
          * 名称: 绑定数据前。
          * 作用: 有机会修改绑定的数据
          * 状态: element不可用,initData,currentData不可用
-         * @param {IViewset} viewset 
+         * @param {IFieldsetView} viewset 
          * @param {{[index:string]:any}} data 将要用于绑定的数据
          * @returns {*} 如果!=undefined，会用返回值替换掉data
          * @memberof IController
          */
-        binding?(viewset:IViewset,data:{[index:string]:any}):any;
+        binding?(viewset:IFieldsetView,data:{[index:string]:any}):any;
         /**
          * 名称: 呈现元素前。
          * 作用: 有机会修改视图里面的htmlelement。
          * 状态: element不可用,initData,currentData已赋值。element已经创建，但还没有加载到document里面
-         * @param {IViewset} viewset 
+         * @param {IFieldsetView} viewset 
          * @memberof IController
          */
-        rendering?(viewset:IViewset);
+        rendering?(viewset:IFieldsetView);
         /**
          * 名称: 呈现元素后。
          * 作用: 有机会修改调整在document中的视图的element。
          * 状态: element已能用,initData,currentData已赋值。
-         * @param {IViewset} viewset 
+         * @param {IFieldsetView} viewset 
          * @memberof IController
          */
-        rendered?(viewset:IViewset);
+        rendered?(viewset:IFieldsetView);
     }
     /**
      * 创建module的选项
@@ -907,6 +1006,14 @@ namespace Quic{
          * @memberof IModule
          */
         fieldset:IFieldset;
+
+        /**
+         * 数据访问器工厂
+         * 
+         * @type {IAccessFactory}
+         * @memberof IModule
+         */
+        accessFactory:IAccessFactory;
         
         /**
          * 事件集合 viewname/fieldname/evtname
@@ -915,15 +1022,7 @@ namespace Quic{
          * @memberof IModule
          */
         events:{[viewname:string]:any};
-        /**
-         * 获取事件监听器
-         * 
-         * @param {string} evtName 事件名
-         * @param {string} [viewname] 视图名，默认为viewset的
-         * @returns {*} 
-         * @memberof IModule
-         */
-        getEventListener(evtName:string,viewname?:string):any;
+        
         /**
          * 控制器
          * 
@@ -939,6 +1038,25 @@ namespace Quic{
          * @memberof IModule
          */
         resources:Array<IDisposable>;
+        /**
+         * 获取事件监听器
+         * 
+         * @param {string} evtName 事件名
+         * @param {string} [viewname] 视图名，默认为viewset的
+         * @returns {*} 
+         * @memberof IModule
+         */
+        getEventListener(evtName:string,viewname?:string):any;
+        /**
+         * 根据permission获取呈现器
+         * 
+         * @param {string} permission 
+         * @returns {IRenderer} 
+         * @memberof IModule
+         */
+        findRenderer(permission:string):IRenderer;
+
+
         
     }
     /**
@@ -959,4 +1077,5 @@ namespace Quic{
      */
     export let loadModule :ILoadModule;
 
+    
 }

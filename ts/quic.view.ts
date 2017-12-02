@@ -7,7 +7,8 @@ namespace Quic{
     export class ViewCSS implements IViewCSS{
         constructor(viewOpts:ViewOpts){
             this.raw = viewOpts.css;
-            //this.base = base;
+            this.base = viewOpts.viewType +" " +((viewOpts as FieldViewOpts).icon?(viewOpts as FieldViewOpts).icon + " ":"")+ viewOpts.name;
+            
         }
         raw:string;
         base:string;
@@ -59,88 +60,79 @@ namespace Quic{
 
     
 
-    export class View implements IView{
+    export class View implements IFieldView{
         name:string;
         viewType:string;
         text?:string;
         group?:string;
         permission?:string;
+        position?:string;
+        nolabel?:boolean;
         mappath?:string;
         css?:string;
-        Css?:ViewCss;
-        viewRenderer:IViewRenderer;
-        container?:IViewset;
-        validatable?:IValidatable;
-        field:Field;
+        CSS?:ViewCSS;
+        renderer:IRenderer;
+        //module:IModule;
+        field?:IField;
         opts:ViewOpts;
+        composition:ICompositeView;
+
         mappedValue:(data:{[index:string]:any},value?:any)=>any;
         protected _element;
-        constructor(container:IViewset,field:Field,opts:ViewOpts){
-            this.container = container;
-            this.field = field;
+        constructor(module:IModule,composition:ICompositeView,field:IField,opts_:ViewOpts){
+            let opts:FieldViewOpts  = opts_ as FieldViewOpts;
             this.opts = opts;
-            this.name = opts.name || field.name;
+            this.name = opts.name?opts.name.replace(trimRegx,""):undefined;
+            if(!this.name && field) this.name = field.name;
+            if(!this.name) env.throw("name is required","view.constructor",opts);
+            this.composition = composition;
             //viewType && viewBuilder
-            this.viewType=opts.viewType;
-            if(this.viewType===field.viewType) this.viewRenderer = field.viewRenderer;
-            if(!this.viewRenderer) this.viewRenderer = this.field.findViewRenderer(this.viewType);
-            if(!this.viewRenderer) return env.throw("Invalid viewType",this.viewType);
+            this.viewType=opts.viewType?opts.viewType.replace(trimRegx,""):undefined;
+            if(field){
+                if(!this.viewType) this.viewType = field.viewType;
+                if(this.viewType===field.viewType) this.renderer = field.renderer;
+            }
+            if(!this.renderer) this.renderer = module.findRenderer(this.viewType);
+            if(!this.renderer) return env.throw("Invalid viewType",this.viewType);
+            
             // css
-            if(!opts.css || opts.css === field.css){
-                this.css = opts.css;
-                this.Css = field.Css;
-            }else {
-                this.Css = new ViewCSS(this.css = opts.css);
-            }
+            this.css=opts.css?opts.css.replace(trimRegx,""):undefined;
+            if(field&&(!this.css || this.css === field.css)) this.CSS = field.CSS;
+            else this.CSS = new ViewCSS(this);
             //permission
-            this.permission = opts.permission || field.permission || container.permission;
-            if(this.permission==="novalidate"){
-                this.permission = "editable";
-            }else {
-                this.validatable = field;
-            }
-            let mappath:string =opts.mappath?opts.mappath.replace(trimRegx,""):undefined;
-            if(mappath!==field.mappath){
-                this.mappath = mappath;
-                this.mappedValue = mappedValue;
-            }else{
-                this.mappath = field.mappath;
-                this.mappedValue = field.mappedValue;
-            } 
+            this.permission = opts.permission || (field &&field.permission) || (composition && composition.permission) || "validatable";
+            
+            this.position = opts.position || (field &&field.position) || (composition && composition.position) ;
+            this.nolabel = opts.nolabel || (field &&field.nolabel);
+            
+            // mappath
+           this.mappath =opts.mappath?opts.mappath.replace(trimRegx,""):undefined;
+           if(field && (!this.mappath|| this.mappath === field.mappath)) this.mappedValue = field.mappedValue;           
+           else this.mappedValue = module.accessFactory.cached(this.mappath);
+            
         }
         
-        value(value?:any):any{
-            if(value===undefined) return this.viewRenderer.getValue(this);
-            this.viewRenderer.setValue(this,value);
+        viewValue(value?:any):any{
+            if(value===undefined) return this.renderer.getValue(this);
+            this.renderer.setValue(this,value);
             return this;
         }
         
         
-        getAccessor(mappath:string):(data:{[index:string]:any},value?:any)=>any{
-            return this.field.getAccessor(mappath);
-        }
+        
         
         element():HTMLElement{
             if(this._element) return this._element;
             
-            let creator : IRednerView = (this.viewRenderer as any)[this.permission];
+            let creator : IRender = (this.renderer as any)[this.permission];
             if(!creator) throw new Error("Invalid permission value:" + this.permission);
             creator(this)
         }
 
-        validate():any{
-            if(this.validatable){
-                return this.validatable.validate(this.value(),this);
-            }
-        }
+        
         
     }
-
-    
-
     
     
-    
-    export let viewRenderers: {[viewType:string]:IViewRenderer} ={};
     
 }

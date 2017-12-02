@@ -2,40 +2,23 @@
 /// <reference path="quic.utils.ts" />
 /// <reference path="quic.field.ts" />
 namespace Quic{
-    export interface FieldsetDefs {
-        name?:string;
-        fields:{[index:string]:FieldOpts};
-    }
-    export interface FieldsetOpts extends FieldsetDefs{
-        accessorFactory?:AccessorFactory;
-        langs?:{[index:string]:string}|boolean;        
-    }
-
-    export interface IFieldset extends  ILocalizable{
-        opts:FieldsetOpts;
-        fields:{[index:string]:IField};
-        //数据访问器
-        accessorFactory:AccessorFactory;
-        fieldValue(fieldOpts:FieldOpts,fieldElement:HTMLElement,data:any,value?:any):any;
-    }
+    
 
     export class Fieldset implements IFieldset,FieldsetOpts{
+        module:IModule;
         fields:{[index:string]:IField};
         langs?:{[index:string]:string};
         opts:FieldsetOpts;
         defs:FieldsetDefs;
-        localization:ILocalizable;
-        viewBuilder:IViewRenderer;
         //数据访问器
-        accessorFactory:AccessorFactory;
+        accessFactory:IAccessFactory;
         
 
-        constructor(localization:ILocalizable,opts:FieldsetOpts){
+        constructor(module:IModule,opts:FieldsetOpts){
             this.defs = this.defs = opts;
-            this.accessorFactory = opts.accessorFactory || new AccessorFactory();
-            this.localization = localization;
-            this.langs = (opts.langs as {[index:string]:string}) || langs;
-
+            this.module = module;
+            this.accessFactory = module.accessFactory;
+            
             let fields:{[index:string]:IField} = this.fields = {};
             for(var n in opts.fields){
                 let fieldDefs= opts.fields[n];
@@ -46,13 +29,15 @@ namespace Quic{
         
         
         //多语言文本处理
-        _T(text:string,mustReturn?:boolean):string{
+        _T(text:string,mustReturn?:boolean):string{return;
+            /*
             let txt = this.langs[text];
             if(txt===undefined) {
                 if(this.localization) txt = this.localization._T(text,mustReturn);
             }
             if(txt===undefined && this.langs!==langs) txt = langs[text];
             return (txt===null || txt===undefined) && mustReturn===true?"":(text===null|| text===undefined?"":text.toString());            
+            */
         }
 
         

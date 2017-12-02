@@ -16,30 +16,34 @@ var Quic;
             //数据类型，默认是string
             this.dataType = opts.dataType ? (opts.dataType.replace(Quic.trimRegx, "") || "string") : "string";
             //视图类型&视图构造器
-            this.viewType = opts.viewType ? (opts.viewType.replace(Quic.trimRegx, "") || this.dataType) : this.dataType;
-            this.viewRenderer = this.findViewRenderer(this.viewType);
-            if (!this.viewRenderer)
-                return Quic.env.throw("Invalid viewType", this.viewType);
-            this.Css = new Quic.ViewCSS(this.css = opts.css);
+            let viewType = this.viewType = opts.viewType ? (opts.viewType.replace(Quic.trimRegx, "") || this.dataType) : this.dataType;
+            this.renderer = this.fieldset.module.findRenderer(viewType);
+            if (!this.renderer)
+                return Quic.env.throw("Invalid viewType", viewType);
+            //nolabel
+            if (viewType === "action" || viewType === "submit" || viewType === "reset" || viewType === "close" || viewType === "open" || viewType === "navigate") {
+                this.nolabel = true;
+            }
+            else
+                this.nolabel = opts.nolabel;
+            //css 
+            this.css = opts.css ? (opts.css.replace(Quic.trimRegx, "") || this.css) : this.dataType;
+            this.CSS = new Quic.ViewCSS(this);
+            //permission
             this.permission = opts.permission; //;|| this.fieldset;
+            this.position = opts.position;
             // mappath
             this.mappath = opts.mappath ? opts.mappath.replace(Quic.trimRegx, "") : undefined;
             this.mappedValue = mappedValue;
             this.mappedValue(null);
         }
-        findViewRenderer(viewType) {
-            return null;
+        validationRule(validType) {
+            return this.validations ? this.validations[validType] : undefined;
         }
-        getAccessor(mappath) {
-            return this.fieldset.accessorFactory.cached(mappath);
-        }
-        hasValidation(validType) {
-            return this.validations && this.validations[validType];
-        }
-        validationInfos(localization) {
+        validationTips(localization) {
             //没有定义验证规则，没有验证信息
             if (!this.validations) {
-                this.validationInfos = () => undefined;
+                this.validationTips = () => undefined;
                 return;
             }
             let msgs = {};
@@ -79,10 +83,10 @@ var Quic;
                 }
             }
             for (let n in msgs) {
-                this.validationInfos = () => msgs;
+                this.validationTips = () => msgs;
                 return msgs;
             }
-            this.validationInfos = () => undefined;
+            this.validationTips = () => undefined;
             return;
         }
         validate(value, state) {

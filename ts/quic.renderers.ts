@@ -7,7 +7,9 @@
 
 
 namespace Quic{
-    export class TextBuilder implements IViewRenderer{
+    export let renderers :{[viewType:string]:IRenderer}={};
+
+    export class TextRenderer implements IRenderer{
         constructor(){}
         //只是可见，没有input元素跟着
         visible(view:IView):HTMLElement{
@@ -60,8 +62,8 @@ namespace Quic{
             }
         }
     };
-    viewBuilders.text = viewBuilders.number = viewBuilders.int = viewBuilders.string = new TextBuilder();
-    class TextareaBuilder extends TextBuilder{
+    renderers.text = renderers.number = renderers.int = renderers.string = new TextRenderer();
+    class TextareaRenderer extends TextRenderer{
         constructor(){
             super();
             this.editable = (view:IView):HTMLElement=>{
@@ -76,66 +78,9 @@ namespace Quic{
             };
         }
     }
-    viewBuilders.textarea = new TextareaBuilder();
+    renderers.textarea = new TextareaRenderer();
 
-    export function createFieldElement(view:IView):HTMLElement{
-        let field = view.field;
-        let permission = view.permission;
-        let creator : ICreateView = (this as any)[permission];
-        if(!creator) throw new Error("Invalid permission value:" + permission);
-        let cssor = (view.Css as any)[view.permission];
-        if(!cssor) throw new Error("Invalid permission value:" + permission);
-        let element = dom.createElement("div");
-        
-        element.className = cssor();
-        if(permission==="hidden")element.style.display="none";
-        let id = "quic_input_"+(Quic as any).nextGNo();
-        let text = this.text || field.fieldset._T(this.text) || field.fieldset._T(this.name);
-        let required = (view.validatable && field.hasValidation("required"))?"<ins class='field-required'>*</ins>":"";
-        element.innerHTML = `<label class="field-caption" for="${id}">${text}${required}</label>`;
-        let input = creator(view);
-        let forcusElement = input["quic-label-focus-element"]||input;
-        forcusElement.id= id;
-        element.appendChild(input);
-        let validInfos = field.validationInfos(this.fieldset);
-        if(view.validatable && permission==="editable" && validInfos){
-            let info = document.createElement("label") as HTMLLabelElement;
-            (info as any).for = id;
-            info.className="field-valid-infos";
-            element.appendChild(info);
-            
-            let validTick;
-            let ul:HTMLUListElement = dom.createElement("ul") as HTMLUListElement;
-            ul.className="validation-infos";
-            for(let n in validInfos){
-                let li = dom.createElement("li");
-                (li as any).name = n;
-                li.innerHTML = validInfos[n];
-                ul.appendChild(li);
-            }
-            (element as any)["quic-validation-infos"]=ul;
-            let valid =()=>{
-                if(validTick) clearTimeout(validTick);
-                validTick=0;
-                this.viewValidate(input);
-            };
-            let delayValid = ()=>{
-                if(validTick) clearTimeout(validTick);
-                validTick = setTimeout(() => {
-                    if(validTick) clearTimeout(validTick);
-                    validTick=0;
-                    this.viewValidate(input);
-                    
-                }, 200);
-            }
-            dom.attach(forcusElement,"keydown",delayValid);
-            dom.attach(forcusElement,"keyup",delayValid);
-            dom.attach(forcusElement,"change",valid);
-            dom.attach(forcusElement,"blur",valid);
-        }
-        
-        return element;
-    }
+    
     
     
 }

@@ -65,15 +65,17 @@ namespace Quic{
          return -1;
      }
 
-     export class AccessorFactory{
+     export class AccessFactory implements IAccessFactory{
         caches:{[dataPath:string]:(data:{[index:string]:any},value?:any)=>any};
         constructor(){
             this.caches = {};
+            this.create = AccessFactory.create;
         }
+        create:(dataPath:string)=>(data:{[index:string]:any},value?:any)=>any;
         cached(dataPath:string):(data:{[index:string]:any},value?:any)=>any{
             let accessor:(data:{[index:string]:any},value?:any)=>any =  this.caches[dataPath];
             if(!accessor){
-                accessor = this.caches[dataPath] = AccessorFactory.create(dataPath);
+                accessor = this.caches[dataPath] = AccessFactory.create(dataPath);
             }
             return accessor;
         }
@@ -104,9 +106,9 @@ namespace Quic{
             
         };
         static cached(dataPath:string):(data:{[index:string]:any},value?:any)=>any{
-            return AccessorFactory.instance.cached(dataPath);
+            return AccessFactory.instance.cached(dataPath);
         }
-        static instance:AccessorFactory = new AccessorFactory();
+        static instance:AccessFactory = new AccessFactory();
     }
     function buildPropCodes(propname:string,dataPath,codes:any,isLast?:boolean){
         if(!propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
@@ -158,12 +160,12 @@ namespace Quic{
             
         }
     }
-    export function str_replace(text:any,data?:any,accessorFactory?:AccessorFactory){
+    export function str_replace(text:any,data?:any,accessorFactory?:AccessFactory){
         if(text===null || text===undefined) text="";
         else text = text.toString();
         //if(!data){ return text;}
         let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory=AccessorFactory.instance);
+        accessorFactory || (accessorFactory=AccessFactory.instance);
         return text.replace(regx,function(m){
             let accessor :(data:{[index:string]:any},value?:any)=>any;
             let expr :string = m[1];

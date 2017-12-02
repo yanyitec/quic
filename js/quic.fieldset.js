@@ -4,11 +4,10 @@
 var Quic;
 (function (Quic) {
     class Fieldset {
-        constructor(localization, opts) {
+        constructor(module, opts) {
             this.defs = this.defs = opts;
-            this.accessorFactory = opts.accessorFactory || new Quic.AccessorFactory();
-            this.localization = localization;
-            this.langs = opts.langs || Quic.langs;
+            this.module = module;
+            this.accessFactory = module.accessFactory;
             let fields = this.fields = {};
             for (var n in opts.fields) {
                 let fieldDefs = opts.fields[n];
@@ -19,14 +18,15 @@ var Quic;
         }
         //多语言文本处理
         _T(text, mustReturn) {
+            return;
+            /*
             let txt = this.langs[text];
-            if (txt === undefined) {
-                if (this.localization)
-                    txt = this.localization._T(text, mustReturn);
+            if(txt===undefined) {
+                if(this.localization) txt = this.localization._T(text,mustReturn);
             }
-            if (txt === undefined && this.langs !== Quic.langs)
-                txt = Quic.langs[text];
-            return (txt === null || txt === undefined) && mustReturn === true ? "" : (text === null || text === undefined ? "" : text.toString());
+            if(txt===undefined && this.langs!==langs) txt = langs[text];
+            return (txt===null || txt===undefined) && mustReturn===true?"":(text===null|| text===undefined?"":text.toString());
+            */
         }
         fieldValue(fieldOpts, fieldElement, data, value) {
             /*
