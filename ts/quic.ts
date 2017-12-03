@@ -1001,7 +1001,7 @@ namespace Quic{
      * @extends {IDataMappable} 可做数据映射
      * @extends {IDisposable} 可以控制销毁
      */
-    export interface IModule extends ITextLocalizable,IDataMappable,IDisposable{
+    export interface IModule extends ITextLocalizable,IDisposable{
         /**
          * 模块名
          * 

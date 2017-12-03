@@ -1,11 +1,32 @@
 var PORT = 3000;
 
 var http = require('http');
+var httpProxy = require('http-proxy');
+
 var url=require('url');
 var fs=require('fs');
 var mine=require('./dev/mine').types;
 var BufferHelper=require('./dev/buffer');
 var path=require('path');
+var proxy = httpProxy.createProxyServer({
+    target: 'http://192.168.10.38:8180/',   //接口地址
+    // 下面的设置用于https
+    // ssl: {
+    //     key: fs.readFileSync('server_decrypt.key', 'utf8'),
+    //     cert: fs.readFileSync('server.crt', 'utf8')
+    // },
+    // secure: false
+});
+
+proxy.on('error', function (err, request, response) {
+    res.writeHead(500, {
+        'Content-Type': 'text/plain'
+    })
+    console.log(err)
+    res.end('Something went wrong.')
+})
+
+
 
 var server = http.createServer(function (request, response) {
     if(request.method==="POST") post(request,response);
@@ -17,6 +38,12 @@ function get(request, response) {
     //console.log(realPath);
     var ext = path.extname(realPath);
     ext = ext ? ext.slice(1) : 'unknown';
+    if(/\/api\/.*$/.test(pathname)){
+        proxy.web(request, response);
+        return;
+    }
+
+
     fs.exists(realPath, function (exists) {
         if (!exists) {
             response.writeHead(404, {

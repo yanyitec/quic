@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/yanyitec/quic#readme",
   "dependencies": {
+    "http-proxy": "^1.16.2",
     "tslint": "^5.8.0"
   }
 }

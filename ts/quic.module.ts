@@ -46,6 +46,8 @@ namespace Quic{
          */
         controller:IController|Function;
 
+        langs:{[key:string]:string};
+
         /**
          * 需要额外销毁的资源
          * 
@@ -57,6 +59,13 @@ namespace Quic{
         _readies:Array<(module:Module)=>void>;
         constructor(){
             this._readies=[];
+        }
+        _T(key:string,mustReturn?:boolean):string{
+            let text;
+            if(this.langs) text = this.langs[key];
+            if(text===undefined) text = langs[key];
+            if(text===undefined && mustReturn===true) key;
+            return text;
         }
         ready(handler:(module:Module)=>void){
             this._readies.push(handler);
