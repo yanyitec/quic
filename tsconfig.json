@@ -1,11 +1,14 @@
 {
     "compilerOptions": {
-        "target": "es2015",
+        "target": "es5",
         "noImplicitAny": false,
-        "module": "es2015",
+        "module": "amd",
         "removeComments": false,
         "sourceMap": false,
-        "outDir": "js"
+        //"outFile": "js/quic.all.js",
+        "outDir": "js",
+        "declarationDir":"typings",
+        "declaration":true     
      },
      "include":[
           "ts"

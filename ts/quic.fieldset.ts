@@ -5,7 +5,7 @@ namespace Quic{
     
 
     export class Fieldset implements IFieldset,FieldsetOpts{
-        module:IModule;
+        quic:IQuic;
         fields:{[index:string]:IField};
         langs?:{[index:string]:string};
         opts:FieldsetOpts;
@@ -14,10 +14,10 @@ namespace Quic{
         accessFactory:IAccessFactory;
         
 
-        constructor(module:IModule,opts:FieldsetOpts){
+        constructor(quic:IQuic,opts:FieldsetOpts){
             this.defs = this.defs = opts;
-            this.module = module;
-            this.accessFactory = module.accessFactory;
+            this.quic = quic;
+            this.accessFactory = quic.accessFactory;
             
             let fields:{[index:string]:IField} = this.fields = {};
             for(var n in opts.fields){

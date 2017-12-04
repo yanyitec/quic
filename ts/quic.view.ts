@@ -15,8 +15,8 @@ namespace Quic{
         
         
         css(permission?:string):string{
-           let _this:any = this;
-           let fn = _this[permission];
+           let _me:any = this;
+           let fn = _me[permission];
            return fn?fn.call(this):this.general();
         };
         general():string{
@@ -79,7 +79,7 @@ namespace Quic{
 
         mappedValue:(data:{[index:string]:any},value?:any)=>any;
         protected _element;
-        constructor(module:IModule,composition:ICompositeView,field:IField,opts_:ViewOpts){
+        constructor(quic:IQuic,composition:ICompositeView,field:IField,opts_:ViewOpts){
             let opts:FieldViewOpts  = opts_ as FieldViewOpts;
             this.opts = opts;
             this.name = opts.name?opts.name.replace(trimRegx,""):undefined;
@@ -92,7 +92,7 @@ namespace Quic{
                 if(!this.viewType) this.viewType = field.viewType;
                 if(this.viewType===field.viewType) this.renderer = field.renderer;
             }
-            if(!this.renderer) this.renderer = module.findRenderer(this.viewType);
+            if(!this.renderer) this.renderer = quic.findRenderer(this.viewType);
             if(!this.renderer) return env.throw("Invalid viewType",this.viewType);
             
             // css
@@ -108,7 +108,7 @@ namespace Quic{
             // mappath
            this.mappath =opts.mappath?opts.mappath.replace(trimRegx,""):undefined;
            if(field && (!this.mappath|| this.mappath === field.mappath)) this.mappedValue = field.mappedValue;           
-           else this.mappedValue = module.accessFactory.cached(this.mappath);
+           else this.mappedValue = quic.accessFactory.cached(this.mappath);
             
         }
         

@@ -4,8 +4,8 @@
 /// <reference path="quic.view.ts" />
 var Quic;
 (function (Quic) {
-    class Field {
-        constructor(fieldset, opts) {
+    var Field = /** @class */ (function () {
+        function Field(fieldset, opts) {
             this.fieldset = fieldset;
             this.opts = opts;
             //字段名,去掉两边的空格
@@ -16,8 +16,8 @@ var Quic;
             //数据类型，默认是string
             this.dataType = opts.dataType ? (opts.dataType.replace(Quic.trimRegx, "") || "string") : "string";
             //视图类型&视图构造器
-            let viewType = this.viewType = opts.viewType ? (opts.viewType.replace(Quic.trimRegx, "") || this.dataType) : this.dataType;
-            this.renderer = this.fieldset.module.findRenderer(viewType);
+            var viewType = this.viewType = opts.viewType ? (opts.viewType.replace(Quic.trimRegx, "") || this.dataType) : this.dataType;
+            this.renderer = this.fieldset.quic.findRenderer(viewType);
             if (!this.renderer)
                 return Quic.env.throw("Invalid viewType", viewType);
             //nolabel
@@ -37,37 +37,37 @@ var Quic;
             this.mappedValue = mappedValue;
             this.mappedValue(null);
         }
-        validationRule(validType) {
+        Field.prototype.validationRule = function (validType) {
             return this.validations ? this.validations[validType] : undefined;
-        }
-        validationTips(localization) {
+        };
+        Field.prototype.validationTips = function (localization) {
             //没有定义验证规则，没有验证信息
             if (!this.validations) {
-                this.validationTips = () => undefined;
+                this.validationTips = function () { return undefined; };
                 return;
             }
-            let msgs = {};
-            let prefix = Quic.opts["validation-message-prefix"] || "valid-";
+            var msgs = {};
+            var prefix = Quic.opts["validation-message-prefix"] || "valid-";
             for (var validType in this.validations) {
-                let validator = validators[validType];
+                var validator = validators[validType];
                 if (validator) {
                     if (validType === "string" || validType === "text" || validType === "str")
                         validType = "length";
                     else if (validType === "number")
                         validType = "decimal";
-                    let messageKey = prefix + validType;
-                    let msg = localization._T(messageKey);
-                    let parameter = this.validations[validType];
+                    var messageKey = prefix + validType;
+                    var msg = localization._T(messageKey);
+                    var parameter = this.validations[validType];
                     if (!parameter) {
                         msgs[validType] = msg;
                     }
                     else {
-                        let t = typeof parameter;
-                        let submsg = "";
+                        var t = typeof parameter;
+                        var submsg = "";
                         if (typeof parameter === "object") {
                             for (var p in parameter) {
-                                let subkey = messageKey + p;
-                                let subtxt = localization._T(subkey, false);
+                                var subkey = messageKey + p;
+                                var subtxt = localization._T(subkey, false);
                                 if (subtxt) {
                                     if (submsg)
                                         submsg += ",";
@@ -82,56 +82,57 @@ var Quic;
                     }
                 }
             }
-            for (let n in msgs) {
-                this.validationTips = () => msgs;
+            for (var n in msgs) {
+                this.validationTips = function () { return msgs; };
                 return msgs;
             }
-            this.validationTips = () => undefined;
+            this.validationTips = function () { return undefined; };
             return;
-        }
-        validate(value, state) {
-            let validations = this.validations;
+        };
+        Field.prototype.validate = function (value, state) {
+            var validations = this.validations;
             if (!validations) {
                 return;
             }
-            let hasError = false;
+            var hasError = false;
             //let value = this.value(data);
-            let required_v = validations["required"];
+            var required_v = validations["required"];
             if (required_v) {
-                let val = value ? value.toString().replace(Quic.trimRegx, "") : "";
+                var val = value ? value.toString().replace(Quic.trimRegx, "") : "";
                 if (!val) {
                     return "required";
                 }
             }
-            let type_v = validations[this.dataType];
-            let typeValidator = validators[this.dataType];
+            var type_v = validations[this.dataType];
+            var typeValidator = validators[this.dataType];
             if (typeValidator) {
                 if (typeValidator(value, type_v, this, state) === false) {
                     return this.dataType.toString();
                 }
             }
-            let result;
+            var result;
             for (var validType in validations) {
                 if (validType === "required" || validType === this.dataType)
                     continue;
-                let validator = validators[validType];
+                var validator = validators[validType];
                 if (!validator) {
                     Quic.env.warn("unregistered validation type:" + validType);
                     continue;
                 }
-                let validParameter = validations[validType];
-                let rs = validator(value, validParameter, this, state);
+                var validParameter = validations[validType];
+                var rs = validator(value, validParameter, this, state);
                 if (rs === false)
                     return validType;
                 if (rs !== true)
                     result = null;
             }
             return result;
-        }
-    }
+        };
+        return Field;
+    }());
     Quic.Field = Field;
     function mappedValue(data, value) {
-        let mappath = this.mappath;
+        var mappath = this.mappath;
         if (!mappath || mappath === this.name) {
             this.mappedValue = function (data, value) {
                 if (value === undefined)
@@ -147,9 +148,9 @@ var Quic;
         return this.mappedValue(data, value);
     }
     Quic.mappedValue = mappedValue;
-    let validators = {};
-    validators["length"] = (value, parameter, field, state) => {
-        let val = (value === undefined || value === null) ? 0 : value.toString().length;
+    var validators = {};
+    validators["length"] = function (value, parameter, field, state) {
+        var val = (value === undefined || value === null) ? 0 : value.toString().length;
         if (parameter && parameter.min && parameter.min > val)
             return false;
         if (parameter && parameter.max && parameter.max < val)
@@ -157,7 +158,7 @@ var Quic;
         return true;
     };
     validators["string"] = validators["text"] = validators["length"];
-    validators["int"] = (value, parameter, field, state) => {
+    validators["int"] = function (value, parameter, field, state) {
         if (value === null || value === undefined)
             return;
         value = value.toString().replace(Quic.trimRegx, "");
@@ -165,34 +166,34 @@ var Quic;
             return;
         if (!Quic.intRegx.test(value))
             return false;
-        let val = parseInt(value);
+        var val = parseInt(value);
         if (parameter && parameter.min && parameter.min > val)
             return false;
         if (parameter && parameter.max && parameter.max < val)
             return false;
         return true;
     };
-    validators["decimal"] = (value, parameter, field, state) => {
+    validators["decimal"] = function (value, parameter, field, state) {
         if (value === null || value === undefined)
             return;
         value = value.toString().replace(Quic.trimRegx, "");
         if (!value)
             return;
-        let match = value.match(Quic.decimalRegx);
+        var match = value.match(Quic.decimalRegx);
         if (!match)
             return false;
         if (parameter && parameter.ipart && match[0].replace(/,/g, "").length > parameter.ipart)
             return false;
         if (parameter && parameter.fpart && match[1] && match[1].length - 1 > parameter.fpart)
             return false;
-        let val = parseFloat(value);
+        var val = parseFloat(value);
         if (parameter && parameter.min && parameter.min > val)
             return false;
         if (parameter && parameter.max && parameter.max < val)
             return false;
         return true;
     };
-    validators["email"] = (value, parameter, field, state) => {
+    validators["email"] = function (value, parameter, field, state) {
         if (value === null || value === undefined || /\s+/.test(value))
             return;
         if (value === undefined || value === null)
@@ -200,15 +201,15 @@ var Quic;
         return Quic.emailRegx.test(value);
     };
     //
-    validators["url"] = (value, parameter, field, state) => {
+    validators["url"] = function (value, parameter, field, state) {
         if (value === null || value === undefined || /\s+/.test(value))
             return;
         return Quic.urlRegx.test(value);
     };
-    validators["regex"] = (value, parameter, field, state) => {
+    validators["regex"] = function (value, parameter, field, state) {
         if (value === null || value === undefined)
             return;
-        let reg;
+        var reg;
         try {
             reg = new RegExp(parameter);
         }
@@ -217,7 +218,7 @@ var Quic;
         }
         return reg.test(value);
     };
-    validators["remote"] = (value, parameter, field, state) => {
+    validators["remote"] = function (value, parameter, field, state) {
         throw new Error("Not implement");
     };
     Quic.langs = {

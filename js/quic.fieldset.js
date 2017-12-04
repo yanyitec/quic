@@ -3,21 +3,21 @@
 /// <reference path="quic.field.ts" />
 var Quic;
 (function (Quic) {
-    class Fieldset {
-        constructor(module, opts) {
+    var Fieldset = /** @class */ (function () {
+        function Fieldset(quic, opts) {
             this.defs = this.defs = opts;
-            this.module = module;
-            this.accessFactory = module.accessFactory;
-            let fields = this.fields = {};
+            this.quic = quic;
+            this.accessFactory = quic.accessFactory;
+            var fields = this.fields = {};
             for (var n in opts.fields) {
-                let fieldDefs = opts.fields[n];
+                var fieldDefs = opts.fields[n];
                 if (!fieldDefs.name)
                     fieldDefs.name = n;
                 fields[fieldDefs.name] = new Quic.Field(this, fieldDefs);
             }
         }
         //多语言文本处理
-        _T(text, mustReturn) {
+        Fieldset.prototype._T = function (text, mustReturn) {
             return;
             /*
             let txt = this.langs[text];
@@ -27,8 +27,8 @@ var Quic;
             if(txt===undefined && this.langs!==langs) txt = langs[text];
             return (txt===null || txt===undefined) && mustReturn===true?"":(text===null|| text===undefined?"":text.toString());
             */
-        }
-        fieldValue(fieldOpts, fieldElement, data, value) {
+        };
+        Fieldset.prototype.fieldValue = function (fieldOpts, fieldElement, data, value) {
             /*
             let field :Field;
             let accessor :(data:{[index:string]:any},value?:any)=>any;;
@@ -52,7 +52,8 @@ var Quic;
                 if(data) {if(accessor) accessor(data,value); else data[fieldOpts.name] = value;}
                 return this;
             }*/
-        }
-    }
+        };
+        return Fieldset;
+    }());
     Quic.Fieldset = Fieldset;
 })(Quic || (Quic = {}));

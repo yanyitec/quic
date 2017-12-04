@@ -3,7 +3,7 @@
 /// <reference path="quic.view.ts" />
 /// <reference path="quic.field.ts" />
 /// <reference path="quic.fieldset.ts" />
-
+/// <reference path="quic.view-composition.ts" />
 namespace Quic{
     
 
@@ -11,7 +11,7 @@ namespace Quic{
        
         //字段集
         fieldset:IFieldset;
-        module :IModule;
+        quic :IQuic;
 
         //要包含的域s表达式或域s配置
         includes?:{[fieldname:string]:FieldOpts};
@@ -22,8 +22,8 @@ namespace Quic{
         initData:{[index:string]:any};
         currentData:  {[index:string]:any};
 
-        constructor(module:IModule,pomposition:ICompositeView,field:IField,opts:ViewOpts){
-            super(module,pomposition,field,opts);
+        constructor(quic:IQuic,pomposition:ICompositeView,field:IField,opts:ViewOpts){
+            super(quic,pomposition,field,opts);
         }
     }
     

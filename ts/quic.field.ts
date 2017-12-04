@@ -59,7 +59,7 @@ namespace Quic{
 
             //视图类型&视图构造器
             let viewType:string = this.viewType=opts.viewType?(opts.viewType.replace(trimRegx,"")||this.dataType):this.dataType;
-             this.renderer = this.fieldset.module.findRenderer(viewType);
+             this.renderer = this.fieldset.quic.findRenderer(viewType);
             if(!this.renderer) return env.throw("Invalid viewType",viewType);
 
             //nolabel
@@ -161,7 +161,7 @@ namespace Quic{
                 if(validType==="required" || validType===this.dataType) continue;
                 let validator = validators[validType];
                 if(!validator){
-                    Quic.env.warn("unregistered validation type:" + validType);
+                    env.warn("unregistered validation type:" + validType);
                     continue;
                 }
                 let validParameter = validations[validType];

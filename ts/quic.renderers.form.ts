@@ -20,7 +20,7 @@ namespace Quic{
     function createForm(view:IFieldsetView){
        
         let permission = view.permission;
-        let module = view.module;
+        let module = view.quic;
         let formSection:ISection = createSection( view.text || module._T(view.name),module);
         formSection.element.className = "quic-form " + view.CSS.css(permission);
         var views = view.components;
@@ -55,7 +55,7 @@ namespace Quic{
 
         //var includes = view.includes || view.fieldset. 
     }
-    function createSection(title:string,module:IModule):any{
+    function createSection(title:string,quic:IQuic):any{
         let result:ISection = {};
         let groupElement = dom.createElement("div");
         result.element = groupElement;
@@ -98,18 +98,19 @@ namespace Quic{
 
         return result;
     }
-    export function createFieldElement(view:IFieldView,viewset:IFieldsetView,module:IModule):HTMLElement{
+    export function createFieldElement(view:IFieldView,viewset:IFieldsetView,quic:IQuic):HTMLElement{
         let field = view.field;
         let permission = view.permission;
         let render : IRender = (this as any)[permission];
         if(!render) throw new Error("Invalid permission value:" + permission);
         let input = render(view);
         if(view.nolabel) return input;
+        
 
         let element = dom.createElement("div");
         if(permission==="hidden")element.style.display="none";
         let id = "quic_input_"+(Quic as any).nextGNo();
-        let text = this.text || module._T(this.text) || module._T(this.name);
+        let text = this.text || quic._T(this.text) || quic._T(this.name);
         let required = (permission==="validatable" && field.validationRule("required"))?"<ins class='quic-field-required'>*</ins>":"";
         element.innerHTML = `<label class="quic-field-caption" for="${id}">${text}${required}</label>`;
         

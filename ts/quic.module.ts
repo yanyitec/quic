@@ -1,22 +1,23 @@
 /// <reference path="quic.ts" />
+/// <reference path="quic.promise.ts" />
 /// <reference path="quic.utils.ts" />
 /// <reference path="quic.env.ts" />
 /// <reference path="quic.dom.ts" />
 namespace Quic{
     
-    export class Module implements IModule{
+    export class Quic implements IQuic{
         /**
          * 模块名
          * 
          * @type {string}
-         * @memberof IModule
+         * @memberof IQuic
          */
         name:string;
         /**
          * 字段集合
          * 
          * @type {IFieldset}
-         * @memberof IModule
+         * @memberof IQuic
          */
         fieldset:IFieldset;
 
@@ -24,7 +25,7 @@ namespace Quic{
          * 数据访问器工厂
          * 
          * @type {IAccessFactory}
-         * @memberof IModule
+         * @memberof IQuic
          */
         accessFactory:IAccessFactory;
 
@@ -34,7 +35,7 @@ namespace Quic{
          * 事件集合 viewname/fieldname/evtname
          * 从controller中分析出来
          * @type {[viewname:string]:any}
-         * @memberof IModule
+         * @memberof IQuic
          */
         events:{[viewname:string]:any};
         
@@ -42,7 +43,7 @@ namespace Quic{
          * 控制器
          * 
          * @type {(IController|Function)}
-         * @memberof IModule
+         * @memberof IQuic
          */
         controller:IController|Function;
 
@@ -52,11 +53,11 @@ namespace Quic{
          * 需要额外销毁的资源
          * 
          * @type {Array<IDisposable>}
-         * @memberof IModule
+         * @memberof IQuic
          */
         resources:Array<IDisposable>;
 
-        _readies:Array<(module:Module)=>void>;
+        _readies:Array<(module:IQuic)=>void>;
         constructor(){
             this._readies=[];
         }
@@ -67,15 +68,15 @@ namespace Quic{
             if(text===undefined && mustReturn===true) key;
             return text;
         }
-        ready(handler:(module:Module)=>void){
+        ready(handler:(module:Quic)=>void){
             this._readies.push(handler);
         }
-        init(opts:ModuleOpts){
+        init(opts:QuicOpts){
             for(let i =0,j= this._readies.length;i<j;i++){
                 this._readies[i](this);
             }
             this._readies=undefined;
-            this.ready = (handler:(module:Module)=>void):void=>{
+            this.ready = (handler:(module:Quic)=>void):void=>{
                 handler(this);
             }
         }
@@ -85,7 +86,7 @@ namespace Quic{
          * @param {string} evtName 事件名
          * @param {string} [viewname] 视图名，默认为viewset的
          * @returns {*} 
-         * @memberof IModule
+         * @memberof IQuic
          */
         getEventListener(evtName:string,viewname?:string):any{
 
@@ -95,17 +96,17 @@ namespace Quic{
          * 
          * @param {string} viewType 
          * @returns {IRenderer} 
-         * @memberof IModule
+         * @memberof IQuic
          */
         findRenderer(viewType:string):IRenderer{
             let result :IRenderer;
             return this.renderers[viewType] || renderers[viewType];
         }
     }
-    export let cached_modules :{[name:string]:Module}={};
-    let loadModule=(name:string ,comlete:(module:Module)=>void)=>{
+    export let cached_modules :{[name:string]:Quic}={};
+    let loadQuic=(name:string ,comlete:(module:Quic)=>void)=>{
         let module = cached_modules[name];
-        if(!module) module = cached_modules[name]=new Module();
+        if(!module) module = cached_modules[name]=new Quic();
         module.ready(comlete);
         return module;
     }

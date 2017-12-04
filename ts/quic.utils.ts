@@ -172,7 +172,7 @@ namespace Quic{
             try{
                 accessor = accessorFactory.cached(expr);
             }catch(ex){
-                Quic.env.warn("Invalid datapath expression:" + expr);
+                env.warn("Invalid datapath expression:" + expr);
                 return "{INVALID:"+expr+"}";
             }
             return data?accessor(data):"";

@@ -4,63 +4,65 @@
 /// <reference path="quic.dom.ts" />
 var Quic;
 (function (Quic) {
-    class ViewCSS {
-        constructor(viewOpts) {
-            this.visible = () => {
-                let css = this.base + " field-visible";
-                if (this.raw)
-                    css += " " + this.raw;
-                this.visible = () => css;
+    var ViewCSS = /** @class */ (function () {
+        function ViewCSS(viewOpts) {
+            var _this = this;
+            this.visible = function () {
+                var css = _this.base + " field-visible";
+                if (_this.raw)
+                    css += " " + _this.raw;
+                _this.visible = function () { return css; };
                 return css;
             };
-            this.hidden = () => {
-                let css = this.base + " field-hidden";
-                if (this.raw)
-                    css += " " + this.raw;
-                this.hidden = () => css;
+            this.hidden = function () {
+                var css = _this.base + " field-hidden";
+                if (_this.raw)
+                    css += " " + _this.raw;
+                _this.hidden = function () { return css; };
                 return css;
             };
-            this.readonly = () => {
-                let css = this.base + " field-readonly";
-                if (this.raw)
-                    css += " " + this.raw;
-                this.readonly = () => css;
+            this.readonly = function () {
+                var css = _this.base + " field-readonly";
+                if (_this.raw)
+                    css += " " + _this.raw;
+                _this.readonly = function () { return css; };
                 return css;
             };
-            this.editable = () => {
-                let css = this.base + " field-editable";
-                if (this.raw)
-                    css += " " + this.raw;
-                this.editable = () => css;
+            this.editable = function () {
+                var css = _this.base + " field-editable";
+                if (_this.raw)
+                    css += " " + _this.raw;
+                _this.editable = function () { return css; };
                 return css;
             };
-            this.validatable = () => {
-                let css = this.base + " field-validatable";
-                if (this.raw)
-                    css += " " + this.raw;
-                this.editable = () => css;
+            this.validatable = function () {
+                var css = _this.base + " field-validatable";
+                if (_this.raw)
+                    css += " " + _this.raw;
+                _this.editable = function () { return css; };
                 return css;
             };
-            this.toString = () => this.base;
+            this.toString = function () { return _this.base; };
             this.raw = viewOpts.css;
             this.base = viewOpts.viewType + " " + (viewOpts.icon ? viewOpts.icon + " " : "") + viewOpts.name;
         }
-        css(permission) {
-            let _this = this;
-            let fn = _this[permission];
+        ViewCSS.prototype.css = function (permission) {
+            var _me = this;
+            var fn = _me[permission];
             return fn ? fn.call(this) : this.general();
-        }
+        };
         ;
-        general() {
-            let css = this.raw ? this.base + " " + this.raw : this.base;
-            this.general = () => css;
+        ViewCSS.prototype.general = function () {
+            var css = this.raw ? this.base + " " + this.raw : this.base;
+            this.general = function () { return css; };
             return css;
-        }
-    }
+        };
+        return ViewCSS;
+    }());
     Quic.ViewCSS = ViewCSS;
-    class View {
-        constructor(module, composition, field, opts_) {
-            let opts = opts_;
+    var View = /** @class */ (function () {
+        function View(quic, composition, field, opts_) {
+            var opts = opts_;
             this.opts = opts;
             this.name = opts.name ? opts.name.replace(Quic.trimRegx, "") : undefined;
             if (!this.name && field)
@@ -77,7 +79,7 @@ var Quic;
                     this.renderer = field.renderer;
             }
             if (!this.renderer)
-                this.renderer = module.findRenderer(this.viewType);
+                this.renderer = quic.findRenderer(this.viewType);
             if (!this.renderer)
                 return Quic.env.throw("Invalid viewType", this.viewType);
             // css
@@ -95,22 +97,23 @@ var Quic;
             if (field && (!this.mappath || this.mappath === field.mappath))
                 this.mappedValue = field.mappedValue;
             else
-                this.mappedValue = module.accessFactory.cached(this.mappath);
+                this.mappedValue = quic.accessFactory.cached(this.mappath);
         }
-        viewValue(value) {
+        View.prototype.viewValue = function (value) {
             if (value === undefined)
                 return this.renderer.getValue(this);
             this.renderer.setValue(this, value);
             return this;
-        }
-        element() {
+        };
+        View.prototype.element = function () {
             if (this._element)
                 return this._element;
-            let creator = this.renderer[this.permission];
+            var creator = this.renderer[this.permission];
             if (!creator)
                 throw new Error("Invalid permission value:" + this.permission);
             creator(this);
-        }
-    }
+        };
+        return View;
+    }());
     Quic.View = View;
 })(Quic || (Quic = {}));

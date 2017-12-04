@@ -13,27 +13,27 @@ namespace Quic{
         constructor(){}
         //只是可见，没有input元素跟着
         visible(view:IView):HTMLElement{
-            let element:HTMLInputElement = Quic.dom.createElement("span") as HTMLInputElement;
+            let element:HTMLInputElement = dom.createElement("span") as HTMLInputElement;
             //element.innerHTML = value===undefined||value===null?"":value;
             return element;
         }
         //隐藏，但是有input元素
         hidden(view:IView):HTMLElement{
-            let element:HTMLInputElement = Quic.dom.createElement("input") as HTMLInputElement;
+            let element:HTMLInputElement = dom.createElement("input") as HTMLInputElement;
             element.type="hidden";
             element.name = view.name;
             return element;
         }
         //只读，不能修改，但是有input元素
         readonly(view:IView):HTMLElement{
-            let element:HTMLInputElement = Quic.dom.createElement("input") as HTMLInputElement;
+            let element:HTMLInputElement = dom.createElement("input") as HTMLInputElement;
             element.type="text";element.readOnly = true;
             element.name = view.name;
             return element;
         }
         // 可编辑
         editable(view:IView):HTMLElement{
-            let element:HTMLInputElement = Quic.dom.createElement("input") as HTMLInputElement;
+            let element:HTMLInputElement = dom.createElement("input") as HTMLInputElement;
             element.type = "text";
             element.name = view.name;
             return element;
@@ -67,12 +67,12 @@ namespace Quic{
         constructor(){
             super();
             this.editable = (view:IView):HTMLElement=>{
-                let element:HTMLInputElement = Quic.dom.createElement("textarea") as HTMLInputElement;
+                let element:HTMLInputElement = dom.createElement("textarea") as HTMLInputElement;
                 element.name = view.name;
                 return element;
             };
             this.readonly = (view:IView):HTMLElement=>{
-                let element:HTMLInputElement = Quic.dom.createElement("textarea") as HTMLInputElement;
+                let element:HTMLInputElement = dom.createElement("textarea") as HTMLInputElement;
                 element.name = view.name;element.readOnly = true;
                 return element;
             };

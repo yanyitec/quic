@@ -8,9 +8,9 @@ namespace Quic{
     
 
     export class FieldView extends View{
-        constructor(module:IModule,composition:ICompositeView,field:IField,opts:FieldViewOpts){
+        constructor(quic:IQuic,composition:ICompositeView,field:IField,opts:FieldViewOpts){
             if(!field) env.throw("field is required","FieldView.constructor");
-            super(module,composition,field,opts);
+            super(quic,composition,field,opts);
         }
     }
     
