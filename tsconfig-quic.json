@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "es5",
+        "noImplicitAny": false,
+        //"module": "amd",
+        "module":"commonjs",
+        "removeComments": false,
+        "sourceMap": false,
+        //"outFile": "js/quic.all.js",
+        "outDir": "quic/js",
+        "declarationDir":"quic/typings",
+        "declaration":true     
+     },
+     "include":[
+          "quic/ts"
+      ],
+    "exclude": [
+          "js","dev","quic/js"
+    ]
+ }

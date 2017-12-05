@@ -1,7 +1,4 @@
 declare namespace Quic {
-    let renderers: {
-        [viewType: string]: IRenderer;
-    };
     class TextRenderer implements IRenderer {
         constructor();
         visible(view: IView): HTMLElement;
