@@ -1,4 +1,4 @@
-
+/// <reference path="quic.abstracts.ts" />
 namespace Quic{
     export class Field implements IField {
         name:string;

@@ -1,3 +1,4 @@
+/// <reference path="quic.abstracts.d.ts" />
 declare namespace Quic {
     class Field implements IField {
         name: string;

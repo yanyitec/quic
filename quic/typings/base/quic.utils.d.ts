@@ -15,26 +15,5 @@ declare namespace Quic {
     function getExactType(o: any): string;
     function extend(dest: any, src: any, arg2?: any, arg3?: any, arg4?: any, arg5?: any, arg6?: any, arg7?: any, arg8?: any): any;
     function array_index(arr: Array<any>, value: any): number;
-    class AccessFactory implements IAccessFactory {
-        caches: {
-            [dataPath: string]: (data: {
-                [index: string]: any;
-            }, value?: any) => any;
-        };
-        constructor();
-        create: (dataPath: string) => (data: {
-            [index: string]: any;
-        }, value?: any) => any;
-        cached(dataPath: string): (data: {
-            [index: string]: any;
-        }, value?: any) => any;
-        static create: (dataPath: string) => (data: {
-            [index: string]: any;
-        }, value?: any) => any;
-        static cached(dataPath: string): (data: {
-            [index: string]: any;
-        }, value?: any) => any;
-        static instance: AccessFactory;
-    }
     function str_replace(text: any, data?: any, accessorFactory?: AccessFactory): any;
 }

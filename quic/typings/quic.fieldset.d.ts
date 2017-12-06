@@ -1,3 +1,4 @@
+/// <reference path="quic.abstracts.d.ts" />
 declare namespace Quic {
     class Fieldset implements IFieldset, FieldsetOpts {
         quic: IQuic;

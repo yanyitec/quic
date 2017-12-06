@@ -1,3 +1,4 @@
+/// <reference path="quic.abstracts.ts" />
 var Quic;
 (function (Quic) {
     var Field = /** @class */ (function () {

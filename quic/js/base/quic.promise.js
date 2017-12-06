@@ -9,6 +9,7 @@ var Quic;
                 async_funcs = undefined;
                 for (var i = 0, j = funcs.length; i < j; i++)
                     funcs.shift()();
+                funcs = undefined;
             }, 0);
         }
         async_funcs.push(func);
@@ -18,72 +19,23 @@ var Quic;
     var Promise = /** @class */ (function () {
         function Promise(async_func) {
             var _this = this;
-            var resolve = function (result, invokeByApply) {
+            var resolve = function (result, invocationWay) {
                 _this.resolve = _this.reject = undefined;
                 if (result instanceof Promise) {
-                    result.then(function (result) {
-                        _this.__promise_result__ = { value: result, invokeByApply: invokeByApply, fullfilled: true };
-                        if (_this.__done_handlers__) {
-                            if (invokeByApply)
-                                for (var i = 0, j = _this.__done_handlers__.length; i < j; i++)
-                                    _this.__done_handlers__.shift().apply(_this, result || []);
-                            else
-                                for (var i = 0, j = _this.__done_handlers__.length; i < j; i++)
-                                    _this.__done_handlers__.shift().call(_this, result);
-                        }
-                        _this.then = function (done, error) {
-                            if (done) {
-                                invokeByApply ? done.apply(_this, result) : done.call(_this, result || []);
-                            }
-                            return _this;
-                        };
-                        _this.done = function (done) {
-                            if (done) {
-                                invokeByApply ? done.apply(_this, result) : done.call(_this, result || []);
-                            }
-                            return _this;
-                        };
-                        _this.fail = function (fail) { return _this; };
-                    }, function (err, at) {
-                        _this.__promise_result__ = { value: result, err_index: at, fullfilled: false };
-                        if (_this.__error_handlers__)
-                            for (var i = 0, j = _this.__error_handlers__.length; i < j; i++)
-                                _this.__error_handlers__.shift().call(_this, err, at);
-                        _this.then = function (done, error) { if (error)
-                            error.call(_this, err, at); return _this; };
-                        _this.fail = function (fail) { if (fail)
-                            fail(err, at); return _this; };
-                        _this.done = function (done) { return _this; };
+                    result.then(function (result, invocationWay) {
+                        resolveResult(self, result, invocationWay);
+                    }, function (reason, index_at) {
+                        rejectResult(self, reason, index_at);
                     });
                     return _this;
                 }
                 else {
-                    _this.then = function (done, error) {
-                        if (done) {
-                            invokeByApply ? done.apply(_this, result) : done.call(_this, result || []);
-                        }
-                        return _this;
-                    };
-                    _this.done = function (done) {
-                        if (done) {
-                            invokeByApply ? done.apply(_this, result) : done.call(_this, result || []);
-                        }
-                        return _this;
-                    };
-                    _this.fail = function (fail) { return _this; };
+                    resolveResult(_this, result, invocationWay);
                     return _this;
                 }
             };
-            var reject = function (err, at) {
-                _this.__promise_result__ = { value: err, err_index: at, fullfilled: false };
-                if (_this.__error_handlers__)
-                    for (var i = 0, j = _this.__error_handlers__.length; i < j; i++)
-                        _this.__error_handlers__.shift().call(_this, err, at);
-                _this.then = function (done, error) { if (error)
-                    error.call(_this, err, at); return _this; };
-                _this.fail = function (fail) { if (fail)
-                    fail.call(_this, err, at); return _this; };
-                _this.done = function (done) { return _this; };
+            var reject = function (reason, at) {
+                rejectResult(_this, reason, at);
                 return _this;
             };
             if (async_func) {
@@ -111,7 +63,7 @@ var Quic;
                 (this.__done_handlers__ || (this.__done_handlers__ = [])).push(done);
             }
             if (error) {
-                (this.__error_handlers__ || (this.__error_handlers__ = [])).push(error);
+                (this.__fail_handlers__ || (this.__fail_handlers__ = [])).push(error);
             }
             return this;
         };
@@ -123,13 +75,75 @@ var Quic;
         };
         Promise.prototype.fail = function (error) {
             if (error) {
-                (this.__error_handlers__ || (this.__error_handlers__ = [])).push(error);
+                (this.__fail_handlers__ || (this.__fail_handlers__ = [])).push(error);
             }
             return this;
         };
         return Promise;
     }());
     Quic.Promise = Promise;
+    var resolveResult = function (self, result, invocationWay) {
+        var _this = this;
+        self.__promise_result__ = { value: result, invocationWay: invocationWay, fullfilled: true };
+        var handlers = self.__done_handlers__;
+        self.__done_handlers__ = self.__done_handlers__ = undefined;
+        if (invocationWay === "quic::invocationWay.apply") {
+            self.then = function (done, error) {
+                if (done) {
+                    done.apply(_this, result || []);
+                }
+                return _this;
+            };
+            self.done = function (done) {
+                if (done) {
+                    done.apply(_this, result || []);
+                }
+                return _this;
+            };
+        }
+        else {
+            self.then = function (done, error) {
+                if (done) {
+                    done.call(self, result, invocationWay);
+                }
+                return _this;
+            };
+            self.done = function (done) {
+                if (done) {
+                    done.call(self, result, invocationWay);
+                }
+                return _this;
+            };
+        }
+        this.fail = function (fail) { return _this; };
+        if (handlers) {
+            if (invocationWay === "quic::invocationWay.apply") {
+                for (var i = 0, j = handlers.length; i < j; i++)
+                    handlers.shift().apply(self, result || []);
+            }
+            else {
+                for (var i = 0, j = handlers.length; i < j; i++)
+                    handlers.shift().call(self, result, invocationWay);
+            }
+            self.__done_handlers__ = undefined;
+        }
+        return self;
+    };
+    var rejectResult = function (self, reason, index_at) {
+        var _this = this;
+        self.__promise_result__ = { value: reason, index_at: index_at, fullfilled: false };
+        var handlers = self.__fail_handlers__;
+        self.__fail_handlers__ = self.__done_handlers__ = undefined;
+        self.then = function (done, error) { if (error)
+            error.call(_this, reason, index_at); return _this; };
+        self.fail = function (fail) { if (fail)
+            fail(reason, index_at); return _this; };
+        self.done = function (done) { return _this; };
+        if (handlers)
+            for (var i = 0, j = handlers.length; i < j; i++)
+                handlers.shift().call(this, reason, index_at);
+        return self;
+    };
     function when() {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
@@ -172,3 +186,6 @@ var Quic;
     }
     Quic.when = when;
 })(Quic || (Quic = {}));
+exports.Promise = Quic.Promise;
+exports.async = Quic.async;
+exports.when = Quic.when;

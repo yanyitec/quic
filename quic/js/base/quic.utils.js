@@ -77,113 +77,6 @@ var Quic;
         return -1;
     }
     Quic.array_index = array_index;
-    var AccessFactory = /** @class */ (function () {
-        function AccessFactory() {
-            this.caches = {};
-            this.create = AccessFactory.create;
-        }
-        AccessFactory.prototype.cached = function (dataPath) {
-            var accessor = this.caches[dataPath];
-            if (!accessor) {
-                accessor = this.caches[dataPath] = AccessFactory.create(dataPath);
-            }
-            return accessor;
-        };
-        AccessFactory.cached = function (dataPath) {
-            return AccessFactory.instance.cached(dataPath);
-        };
-        AccessFactory.create = function (dataPath) {
-            if (dataPath == "$") {
-                return function (data, value) {
-                    if (value === undefined)
-                        return data;
-                    throw new Error("setting cannot apply for datapath[$]");
-                };
-            }
-            var paths = dataPath.split(".");
-            var last_propname = paths.shift().replace(Quic.trimRegx, "");
-            if (!last_propname)
-                throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-            var codes = {
-                path: "data",
-                getter_code: "",
-                setter_code: ""
-            };
-            for (var i = 0, j = paths.length; i < j; i++) {
-                var propname = paths[i].replace(Quic.trimRegx, "");
-                buildPropCodes(propname, dataPath, codes);
-            }
-            buildPropCodes(last_propname, dataPath, codes, true);
-            var code = "if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-            code += "var at;\nif(value===undefined){\n" + codes.getter_code + "\treturn data;\n}else{\n" + codes.setter_code + "\n}\n";
-            return new Function("data", code);
-        };
-        AccessFactory.instance = new AccessFactory();
-        return AccessFactory;
-    }());
-    Quic.AccessFactory = AccessFactory;
-    function buildPropCodes(propname, dataPath, codes, isLast) {
-        if (!propname)
-            throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-        var match = Quic.arrRegx.exec(propname);
-        var nextObjValue = "{}";
-        var sub = undefined;
-        if (match) {
-            sub = match.toString();
-            propname = propname.substring(0, propname.length - sub.length);
-            nextObjValue = "[]";
-        }
-        codes.path += "." + propname;
-        codes.getter_code += "\tif(!data." + propname + ")return undefined;else data=data." + propname + ";\n";
-        codes.setter_code += "\tif(!data)data." + propname + "=" + nextObjValue + ";\n";
-        if (sub) {
-            var subs = sub.substr(1, sub.length - 2).split(/\s*\]\s*\[\s*/g);
-            for (var m = 0, n = subs.length - 1; m <= n; m++) {
-                var indexAt = subs[m];
-                if (indexAt === "first") {
-                    codes.getter_code += "\tif(!data[0])return undefined;else data = data[0];\n";
-                    if (m == n) {
-                        //最后一个[]
-                        if (isLast)
-                            codes.setter_code += "\tif(!data[0]) data[0] = value;\n";
-                        else
-                            codes.setter_code += "\tif(!data[0]) data = data[0]={};else data=data[0];\n";
-                    }
-                    else {
-                        codes.setter_code += "\tif(!data[0]) data[0]=[]\"\n";
-                    }
-                }
-                else if (indexAt === "last") {
-                    codes.getter_code += "\tat = data.length?data.length-1:0; if(!data[at])return undefined;else data = data[at];\n";
-                    if (m == n) {
-                        //最后一个[]
-                        if (isLast)
-                            codes.setter_code += "\tat = data.length?data.length-1:0; if(!data[at]) data[at]=value\";\n";
-                        else
-                            codes.setter_code += "\tat = data.length?data.length-1:0; if(!data[at]) data = data[at]={};else data=data[at];\n";
-                    }
-                    else {
-                        codes.setter_code += "\tat = data.length ? data.length-1 : 0; if(!data[at]) data = data[at]=[];else data=data[at];\n";
-                    }
-                }
-                else {
-                    if (!/\d+/.test(indexAt))
-                        throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
-                    codes.getter_code += "\tif(!data[" + indexAt + "])return undefined;else data = data[" + indexAt + "];\n";
-                    if (m == n) {
-                        //最后一个[]
-                        if (isLast)
-                            codes.setter_code += "\tif(!data[" + indexAt + "]) data[" + indexAt + "]=value\";\n";
-                        else
-                            codes.setter_code += "\tif(!data[" + indexAt + "]) data = data[" + indexAt + "]={};else data=data[" + indexAt + "];\n";
-                    }
-                    else {
-                        codes.setter_code += "\tif(!data[" + indexAt + "]) data = data[" + indexAt + "]=[];else data=data[" + indexAt + "];\n";
-                    }
-                }
-            }
-        }
-    }
     function str_replace(text, data, accessorFactory) {
         if (text === null || text === undefined)
             text = "";
@@ -191,7 +84,7 @@ var Quic;
             text = text.toString();
         //if(!data){ return text;}
         var regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory = AccessFactory.instance);
+        accessorFactory || (accessorFactory = Quic.AccessFactory.instance);
         return text.replace(regx, function (m) {
             var accessor;
             var expr = m[1];
