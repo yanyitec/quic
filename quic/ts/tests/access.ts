@@ -23,6 +23,33 @@ namespace Quic{
             new $$TEST(value).isEqual(200);
             $$TEST.log("basic->pass");
         }
+
+        function arr(){
+            $$TEST.log("arr->test...");
+            let data :any = [1,{
+                "prop":[1,2,"yes",3]
+            }];
+            let access:IDataAccess = AccessFactory.getOrCreate("[1].prop[2]");
+            let value = access(data);
+            new $$TEST(value).isEqual("yes");
+            access(data,200);
+            new $$TEST(data[1].prop[2]).isEqual(200);
+
+            let supperior = access.superior;
+            value = supperior(data);
+            new $$TEST(value).isEqual(data[1].prop);
+
+            supperior = supperior.superior;
+            value = supperior(data);
+            new $$TEST(value).isEqual(data[1]);
+
+            supperior = supperior.superior;
+            value = supperior(data);
+            new $$TEST(value).isEqual(data);
+
+            $$TEST.log("arr->pass");
+        }
+        
         
         
 
@@ -32,5 +59,6 @@ namespace Quic{
             $$TEST = require("../base/quic.test").$$TEST;
         } 
         basic();
+        arr();
     }
 }
