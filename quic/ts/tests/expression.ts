@@ -7,6 +7,7 @@ namespace Quic{
             $$TEST.log("basic->test...");
             let data :any = {
                 "prop01":{
+                    "name":"yiy",
                     "prop0101":201
                 },
                 "i":12
@@ -16,6 +17,11 @@ namespace Quic{
             let expr = ExpressionFactory.getOrCreate(text);
             let rs = expr(data,true);
             new $$TEST(rs).isEqual("201&tag=abc");
+            text = "name=yanyi&count=${prop01.prop0101 + i}&tag=${prop01.name}";
+            expr = ExpressionFactory.getOrCreate(text);
+            rs = expr(data,true);
+            new $$TEST(rs).isEqual("name=yanyi&count=213&tag=yiy");
+
             $$TEST.log("basic->pass...");
         }
 
