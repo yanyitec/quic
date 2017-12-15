@@ -104,7 +104,7 @@ namespace Quic{
         self.__promise_result__={value:result,invocationWay:invocationWay,fullfilled:true};
         let handlers = self.__done_handlers__;
         self.__done_handlers__ = self.__done_handlers__=undefined;
-        if(invocationWay==="quic::invocationWay.apply"){
+        if(invocationWay==="quic::apply"){
             self.then =(done:(result?:any)=>void,error?:(err?:any,err_index?:number|string)=>void):Promise=>{
                 if(done){
                     done.apply(this,result||[]);
@@ -135,7 +135,7 @@ namespace Quic{
         this.fail = (fail:(reason?:any,index_at?:number|string)=>void)=>{return this;};
 
         if(handlers) {
-            if(invocationWay==="quic::invocationWay.apply"){
+            if(invocationWay==="quic::apply"){
                 for(let i=0,j=handlers.length;i<j;i++) handlers.shift().apply(self,result||[]);
             }
             else{

@@ -1,3 +1,4 @@
+/// <reference path="quic.promise.ts" />
 namespace Quic{
     /**
      * 环境容器的抽象
@@ -154,8 +155,11 @@ namespace Quic{
          * @memberof Dom
          */
         hasClass(element:HTMLElement,css:string);    
+        bas_url():string;
         
     }
     export const ctx:IContext = {} as IContext;
+
+    export const configs:{[index:string]:any}={};
     
 }

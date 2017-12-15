@@ -9,14 +9,10 @@ namespace Quic{
     }
     let id_seed:number = 10000;
 
-    export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
-    export let trimRegx:RegExp = /(^\s+)|(\s+$)/g;
-    export let urlRegx :RegExp = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
-    export let emailRegx :RegExp = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/g;
-    export let intRegx :RegExp = /(^[+\-]?\d+$)|(^[+\-]?\d{1,3}(,\d{3})?$)/;
-    export let decimalRegx:RegExp= /^((?:[+\-]?\d+)|(?:[+\-]?\d{1,3}(?:\d{3})?))(.\d+)?$/;
+    //export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
+   
 
-    export let trim :(o:any)=>string=(o:any):string=>o===null||o===undefined?"":o.toString().replace(trimRegx,"");
+    export let trim :(o:any)=>string=(o:any):string=>o===null||o===undefined?"":o.toString().replace(/^(?:\s+)|(?:\s+$)/,"");
     
     let toString = Object.prototype.toString;
     export let isArray:(o:any)=>boolean=(o:any):boolean=>toString.call(o)==="[object Array]";
@@ -34,6 +30,7 @@ namespace Quic{
         }
         return t;
     }
+
     
     
     export function extend(dest:any,src:any,arg2?:any,arg3?:any,arg4?:any,arg5?:any,arg6?:any,arg7?:any,arg8?:any):any{
@@ -72,12 +69,12 @@ namespace Quic{
         else text = text.toString();
         //if(!data){ return text;}
         let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory=AccessFactory.instance);
+        accessorFactory || (accessorFactory=AccessFactory.default);
         return text.replace(regx,function(m){
             let accessor :(data:{[index:string]:any},value?:any)=>any;
             let expr :string = m[1];
             try{
-                accessor = accessorFactory.cached(expr);
+                accessor = accessorFactory.getOrCreate(expr);
             }catch(ex){
                 ctx.warn("Invalid datapath expression:" + expr);
                 return "{INVALID:"+expr+"}";

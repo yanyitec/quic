@@ -1,3 +1,4 @@
+/// <reference path="quic.promise.d.ts" />
 declare namespace Quic {
     /**
      * 环境容器的抽象
@@ -151,6 +152,10 @@ declare namespace Quic {
          * @memberof Dom
          */
         hasClass(element: HTMLElement, css: string): any;
+        bas_url(): string;
     }
     const ctx: IContext;
+    const configs: {
+        [index: string]: any;
+    };
 }

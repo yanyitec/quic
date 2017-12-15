@@ -10,13 +10,8 @@ var Quic;
     }
     Quic.nextGNo = nextGNo;
     var id_seed = 10000;
-    Quic.arrRegx = /(?:\[\d+\])+$/g;
-    Quic.trimRegx = /(^\s+)|(\s+$)/g;
-    Quic.urlRegx = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
-    Quic.emailRegx = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/g;
-    Quic.intRegx = /(^[+\-]?\d+$)|(^[+\-]?\d{1,3}(,\d{3})?$)/;
-    Quic.decimalRegx = /^((?:[+\-]?\d+)|(?:[+\-]?\d{1,3}(?:\d{3})?))(.\d+)?$/;
-    Quic.trim = function (o) { return o === null || o === undefined ? "" : o.toString().replace(Quic.trimRegx, ""); };
+    //export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
+    Quic.trim = function (o) { return o === null || o === undefined ? "" : o.toString().replace(/^(?:\s+)|(?:\s+$)/, ""); };
     var toString = Object.prototype.toString;
     Quic.isArray = function (o) { return toString.call(o) === "[object Array]"; };
     function isElement(node) {
@@ -84,12 +79,12 @@ var Quic;
             text = text.toString();
         //if(!data){ return text;}
         var regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory = Quic.AccessFactory.instance);
+        accessorFactory || (accessorFactory = Quic.AccessFactory.default);
         return text.replace(regx, function (m) {
             var accessor;
             var expr = m[1];
             try {
-                accessor = accessorFactory.cached(expr);
+                accessor = accessorFactory.getOrCreate(expr);
             }
             catch (ex) {
                 Quic.ctx.warn("Invalid datapath expression:" + expr);

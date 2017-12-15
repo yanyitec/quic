@@ -14,29 +14,27 @@ var Quic;
         function AccessFactory() {
             this.caches = { "": rootAccess };
         }
-        AccessFactory.prototype.create = function (dataPath) {
-            return AccessFactory.create(dataPath, this);
-        };
-        AccessFactory.prototype.cached = function (datapath) {
-            return this.getOrCreate(datapath);
-        };
-        AccessFactory.prototype.getOrCreate = function (dataPath) {
-            var accessor = this.caches[dataPath];
+        AccessFactory.prototype.getOrCreate = function (expr) {
+            var accessor = this.caches[expr];
             if (!accessor) {
-                accessor = this.caches[dataPath] = AccessFactory.create(dataPath, this);
+                accessor = this.caches[expr] = AccessFactory.create(expr, this);
             }
             return accessor;
         };
-        AccessFactory.create = function (dataPath, factory) {
+        AccessFactory.getOrCreate = function (mappath) {
+            return AccessFactory.default.getOrCreate(mappath);
+        };
+        AccessFactory.create = function (dataPath, accessFactory) {
             if (dataPath == "") {
                 return rootAccess;
             }
             var paths = dataPath.split(".");
+            accessFactory || (accessFactory = AccessFactory.default);
             var last_propname = paths.pop().replace(trimRegx, "");
             if (!last_propname)
                 throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
             var codes = {
-                factory: factory,
+                factory: accessFactory,
                 superior: null,
                 path: "",
                 getter_code: "\tif(!data)return undefined;\n",
@@ -47,22 +45,17 @@ var Quic;
                 buildPropCodes(propname, dataPath, codes, false);
             }
             buildPropCodes(last_propname, dataPath, codes, true);
+            var notify_code = "\n    var change_handlers;\n    if(this && this.__valuechange__ && this.__valuechanges__ && (change_handlers=this.__valuechanges__[\"" + dataPath + "\"])){\n        for(var i=0,j=change_handlers.length;i<j;i++) change_handlers[i](value,this,sender,\"" + dataPath + "\"); \n    }";
             var code = "//" + dataPath + "\n"; //"if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-            code += "var at;\nif(value===undefined){\n" + codes.getter_code + "}else{\n" + codes.setter_code + "\n}\n";
-            var result = new Function("data", "value", code);
-            result.datapath = dataPath;
+            code += "var at;\nif(value===undefined){\n" + codes.getter_code + "}else{\n" + codes.setter_code + notify_code + "\n}\n";
+            var result = new Function("data", "value", "sender", code);
             result.superior = codes.superior;
+            result.mappath = codes.path;
             return result;
         };
         ;
-        AccessFactory.getOrCreate = function (dataPath) {
-            return AccessFactory.instance.getOrCreate(dataPath);
-        };
-        AccessFactory.cached = function (dataPath) {
-            return AccessFactory.instance.getOrCreate(dataPath);
-        };
         AccessFactory.rootAccess = rootAccess;
-        AccessFactory.instance = new AccessFactory();
+        AccessFactory.default = new AccessFactory();
         return AccessFactory;
     }());
     Quic.AccessFactory = AccessFactory;
@@ -92,7 +85,7 @@ var Quic;
                         //最后一个[]
                         if (isLast) {
                             codes.setter_code += "\tdata[0] = value;\n";
-                            codes.superior = codes.factory.cached(codes.path);
+                            codes.superior = codes.factory.getOrCreate(codes.path);
                         }
                         else {
                             codes.setter_code += "\tif(!data[0]) data = data[0]={};else data=data[0];\n";
@@ -109,7 +102,7 @@ var Quic;
                         //最后一个[]
                         if (isLast) {
                             codes.setter_code += "\tat = data.length?data.length-1:0;data[at]=value;\n";
-                            codes.superior = codes.factory.cached(codes.path);
+                            codes.superior = codes.factory.getOrCreate(codes.path);
                         }
                         else {
                             codes.setter_code += "\tat = data.length?data.length-1:0; if(!data[at]) data = data[at]={};else data=data[at];\n";
@@ -127,7 +120,7 @@ var Quic;
                     if (m == n) {
                         //最后一个[]
                         if (isLast) {
-                            codes.superior = codes.factory.cached(codes.path);
+                            codes.superior = codes.factory.getOrCreate(codes.path);
                             codes.setter_code += "\tdata[" + indexAt + "]=value;\n";
                             codes.getter_code += "\treturn data;\n";
                         }
@@ -145,7 +138,7 @@ var Quic;
         else {
             if (isLast) {
                 if (codes.path !== dataPath) {
-                    codes.superior = codes.factory.cached(codes.path);
+                    codes.superior = codes.factory.getOrCreate(codes.path);
                 }
                 if (propname) {
                     codes.getter_code += "\treturn data." + propname + ";\n";
@@ -162,5 +155,6 @@ var Quic;
             codes.path += codes.path ? "." + propname : propname;
         }
     }
+    var dataPathRegx = /(?:\[(?:\d+|first|last)\])?[a-zA-Z_\$][a-zA-Z0-9_\$]*(?:\[(?:\d+|first|last)\])*(?:.[a-zA-Z_\$][a-zA-Z0-9_\$]*(?:\[(?:\d+|first|last)\])*)/g;
 })(Quic || (Quic = {}));
 exports.AccessFactory = Quic.AccessFactory;

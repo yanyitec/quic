@@ -97,10 +97,6 @@ var Quic;
     }(Quic.Promise));
     Quic.Module = Module;
     var cached_modules = {};
-    function makeUrl(url, data) {
-        return url;
-    }
-    Quic.makeUrl = makeUrl;
     function require() {
         var modnames = [];
         for (var _i = 0; _i < arguments.length; _i++) {
@@ -145,7 +141,7 @@ var Quic;
         if (!module) {
             module = new Module(name);
             cached_modules[name] = module;
-            var url = makeUrl(name);
+            var url = Quic.makeUrl(name);
             var res = loadScript(url).then(function (scriptExports) {
                 if (scriptExports.__isdefine__) {
                     scriptExports.then(function (defineResults) {

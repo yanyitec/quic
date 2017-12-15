@@ -3,12 +3,6 @@ declare namespace Quic {
         "validation-message-prefix": string;
     };
     function nextGNo(): number;
-    let arrRegx: RegExp;
-    let trimRegx: RegExp;
-    let urlRegx: RegExp;
-    let emailRegx: RegExp;
-    let intRegx: RegExp;
-    let decimalRegx: RegExp;
     let trim: (o: any) => string;
     let isArray: (o: any) => boolean;
     function isElement(node: any): any;

@@ -1,8 +1,43 @@
 
 namespace Quic{
-    
+    /**
+     * 视图集合选项。创建视图集时作为参数
+     * 可以当作视图选项来用
+     * @export
+     * @interface ViewStateSetOpts
+     * @extends {ViewOpts} 可以当作视图选项来用
+     */
+    interface ViewStateSetOpts extends ViewOpts {
+        /**
+         * //要包含的域s表达式或域s配置
+         * 域表达式的例子: [id:hidden,name:validatable,pwd:validatable],person[gender:editable]
+         * @type {(string | {[fieldname:string]:FieldOpts})}
+         * @memberof ViewStateSetOpts
+         */
+        fields?: string | {
+            [fieldname: string]: FieldOpts;
+        };
+        /**
+         * 要排除的字段/域的名字
+         *
+         * @type {(string | Array<string>)}
+         * @memberof ViewStateSetOpts
+         */
+        excludes?: string | Array<string>;
+        /**
+         * //初始化数据
+         *
+         * @type {{[index:string]:any}}
+         * @memberof ViewStateSetOpts
+         */
+        initData?: {
+            [index: string]: any;
+        };
+        
+        dataSource:DataSourceOpts;
+    }
 
-    export class FieldsetView extends CompositeView implements FieldsetViewOpts, IFieldsetView{
+    export class FieldsetStateView extends ViewState implements ViewStateSetOpts{
        
         //字段集
         fieldset:IFieldset;
@@ -16,10 +51,13 @@ namespace Quic{
         controller:IController;
         initData:{[index:string]:any};
         currentData:  {[index:string]:any};
+        dataSource :DataSourceOpts;
 
-        constructor(quic:IQuic,pomposition:ICompositeView,field:IField,opts:ViewOpts){
-            super(quic,pomposition,field,opts);
+        constructor(view:IView,opts:ViewStateSetOpts,composit:IView,field:IField){
+            super(view,opts,composit,field);
         }
+
+        
     }
     
     

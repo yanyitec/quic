@@ -1,5 +1,16 @@
 /// <reference path="quic.abstracts.ts" />
+/// <reference path="base/quic.context.ts" />
+/// <reference path="base/quic.access.ts" />
+/// <reference path="base/quic.utils.ts" />
+/// <reference path="quic.view.ts" />
 namespace Quic{
+    let trimRegx:RegExp = /(^\s+)|(\s+$)/g;
+    let urlRegx :RegExp = /^\s*(ht|f)tp(s?)\:\/\/[0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*(:(0-9)*)*(\/?)([a-zA-Z0-9\-\.\?\,\'\/\\\+&amp;%\$#_]*)?/g;
+    let emailRegx :RegExp = /^\s*[a-z]([a-z0-9]*[-_]?[a-z0-9]+)*@([a-z0-9]*[-_]?[a-z0-9]+)+[\.][a-z]{2,3}([\.][a-z]{2})?\s*$/g;
+    let intRegx :RegExp = /(^[+\-]?\d+$)|(^[+\-]?\d{1,3}(,\d{3})?$)/;
+    let decimalRegx:RegExp= /^((?:[+\-]?\d+)|(?:[+\-]?\d{1,3}(?:\d{3})?))(.\d+)?$/;
+    let rootAccess = AccessFactory.rootAccess;
+
     export class Field implements IField {
         name:string;
         dataType:string;
@@ -18,7 +29,7 @@ namespace Quic{
         // 视图创建器
         renderer:IRenderer;
         // 权限化的css
-        CSS:ViewCSS;
+        CSS:IViewCSS;
         // 分组
         group?:string;
         // 位置
@@ -27,46 +38,53 @@ namespace Quic{
         mappath?:string;
         //定义
         opts:FieldOpts;
-        //form构建时，不需要label
-        nolabel:boolean;
+        //form构建时，不需要label等装饰
+        nowrap?:boolean;
         
-        mappedValue:(data:{[index:string]:any},value?:any)=>any;
+        accessor:IDataAccess;
+        quic:IQuic;
+        //mappedValue:(data:{[index:string]:any},value?:any)=>any;
 
         accessFactory:IAccessFactory;
         
-        constructor(fieldset:IFieldset,opts:FieldOpts){
+        constructor(opts:FieldOpts,fieldset:IFieldset){
             this.fieldset = fieldset;
+            this.accessFactory = (fieldset?fieldset.accessFactory:null) || AccessFactory.instance;
             this.opts = opts;
-
+            if(fieldset) this.quic = fieldset.quic;
             //字段名,去掉两边的空格
-            this.name = opts.name?opts.name.replace(trimRegx,""):undefined;
+            this.name = opts.name?opts.name:undefined;
 
             //必须有字段名
             if(!this.name) throw new Error("name is required for DataField");
 
             //数据类型，默认是string
-            this.dataType = opts.dataType?(opts.dataType.replace(trimRegx,"")||"string"):"string";
+            this.dataType = opts.dataType?(opts.dataType || "string"):"string";
 
             //视图类型&视图构造器
-            let viewType:string = this.viewType=opts.viewType?(opts.viewType.replace(trimRegx,"")||this.dataType):this.dataType;
+            let viewType:string = this.viewType=opts.viewType?(opts.viewType||this.dataType):this.dataType;
              this.renderer = this.fieldset.quic.findRenderer(viewType);
             if(!this.renderer) return ctx.throw("Invalid viewType",viewType);
-
+            let isActionView = View.isAction(viewType);
             //nolabel
-            if(viewType==="action" || viewType==="submit" || viewType==="reset" || viewType==="close" || viewType==="open" || viewType==="navigate"){
-                this.nolabel = true;
-            }else this.nolabel =opts.nolabel;
+            if(isActionView){
+                this.nowrap = true;
+            }else this.nowrap =opts.nowrap;
             
             //css 
-            this.css=opts.css?(opts.css.replace(trimRegx,"")||this.css):this.dataType;
+            this.css=opts.css?(opts.css||this.css):this.dataType;
             this.CSS = new ViewCSS(this);
             //permission
             this.permission = opts.permission ;//;|| this.fieldset;
             this.position = opts.position;
             // mappath
-            this.mappath =opts.mappath?opts.mappath.replace(trimRegx,""):undefined;
-            this.mappedValue = mappedValue;
-            this.mappedValue(null);
+            this.mappath =opts.mappath?opts.mappath:undefined;
+            if(this.mappath){
+                if(this.mappath==="$" || this.mappath ==="$root"){
+                    this.accessor = rootAccess;
+                }else this.accessor = this.accessFactory.getOrCreate(this.mappath);
+            }
+            if(!this.accessor) this.accessor=isActionView?rootAccess:this.accessFactory.getOrCreate(this.name);
             
         }
         
@@ -85,7 +103,7 @@ namespace Quic{
                 return;
             }
             let msgs :{[index:string]:string}= {};
-            let prefix :string = opts["validation-message-prefix"]||"valid-";
+            let prefix :string = configs["validation-message-prefix"]||"valid-";
 
             for(var validType in this.validations){
                 let validator:IValidate = validators[validType];
@@ -134,7 +152,7 @@ namespace Quic{
             let required_v = validations["required"];
             
             if(required_v){
-                let val = value?value.toString().replace(trimRegx,""):"";
+                let val = value?value.toString():"";
                 if(!val) {
                     return "required";
                 }
@@ -198,7 +216,7 @@ namespace Quic{
 
     validators["int"]=(value:any,parameter?:any,field?:Field,state?:any):boolean=>{
         if(value===null || value===undefined)return;
-        value=value.toString().replace(trimRegx,"");
+        value=value.toString();
         if(!value) return;
         if(!intRegx.test(value))return false;
             
@@ -209,7 +227,7 @@ namespace Quic{
     }
     validators["decimal"]=(value:any,parameter?:any,field?:Field,state?:any):boolean=>{
         if(value===null || value===undefined)return;
-        value=value.toString().replace(trimRegx,"");
+        value=value.toString();
         if(!value) return;
         let match :RegExpMatchArray = value.match(decimalRegx);
         if(!match)return false;

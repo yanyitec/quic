@@ -7,17 +7,19 @@ namespace Quic{
      */
     export interface IDataAccess{
         /**
-         * 
-         * 
          * @param {{[index:string]:any}} data 数据对象
          * @param {*} [value] 值。undefined=getter
          * @returns {*} 
          * @memberof IDataAccess
          */
-        (data:{[index:string]:any},value?:any):any;
-        datapath:string;
-        superior:IDataAccess;
+        (data:{[index:string]:any},value?:any,sender?:any):any;
+        mappath:string;
+        superior?:IDataAccess;
     }
+
+   
+
+
     
     /**
      * 访问器工厂
@@ -27,23 +29,7 @@ namespace Quic{
      * @interface IAccessFactory
      */
     export interface IAccessFactory{
-        /**
-         * 创建数据访问器
-         * 
-         * @param {string} dataPath 数据路径
-         * @param {string} dataPath 数据路径
-         * @returns {IDataAccess} 该路径的数据访问器
-         * @memberof IAccessFactory
-         */
-        create(dataPath:string,factory?:any):IDataAccess;
-        /**
-         * 获取或创建数据访问器
-         * 
-         * @param {string} dataPath 数据路径
-         * @returns {IDataAccess}  该路径的数据访问器
-         * @memberof IAccessFactory
-         */
-        cached(dataPath:string):IDataAccess;
+        
         /**
          * 获取或创建数据访问器
          * 
@@ -66,33 +52,33 @@ namespace Quic{
 
     export class AccessFactory implements IAccessFactory{
         caches:{[dataPath:string]:IDataAccess};
+        
         constructor(){
             this.caches = {"":rootAccess};
         }
-        create(dataPath:string):IDataAccess{
-            return AccessFactory.create(dataPath,this);
-        }
-        cached(datapath:string):IDataAccess{
-            return this.getOrCreate(datapath);
-        }
-        getOrCreate(dataPath:string):IDataAccess{
-            let accessor:IDataAccess =  this.caches[dataPath];
+        
+        
+        getOrCreate(expr:string):IDataAccess{
+            let accessor:IDataAccess =  this.caches[expr];
             if(!accessor){
-                accessor = this.caches[dataPath] = AccessFactory.create(dataPath,this);
+                accessor = this.caches[expr] = AccessFactory.create(expr,this);
             }
             return accessor;
         }
         static rootAccess:IDataAccess = rootAccess;
-        static create(dataPath:string,factory:IAccessFactory):IDataAccess {
+        static getOrCreate(mappath:string):IDataAccess{
+            return AccessFactory.default.getOrCreate(mappath);
+        }
+        static create(dataPath:string,accessFactory?:IAccessFactory):IDataAccess {
             if(dataPath==""){
                 return rootAccess;
             }
             let paths = dataPath.split(".");
-            
+            accessFactory ||(accessFactory=AccessFactory.default);
             let last_propname = paths.pop().replace(trimRegx,"");
             if(!last_propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
             let codes = {
-                factory:factory,
+                factory:accessFactory,
                 superior:null,
                 path:"",
                 getter_code:"\tif(!data)return undefined;\n",
@@ -103,21 +89,21 @@ namespace Quic{
                 buildPropCodes(propname,dataPath,codes,false);
             }
             buildPropCodes(last_propname,dataPath,codes,true);
+            let notify_code = `
+    var change_handlers;
+    if(this && this.__valuechange__ && this.__valuechanges__ && (change_handlers=this.__valuechanges__["${dataPath}"])){
+        for(var i=0,j=change_handlers.length;i<j;i++) change_handlers[i](value,this,sender,"${dataPath}"); 
+    }`;
             let code = "//" + dataPath + "\n";//"if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-            code +="var at;\nif(value===undefined){\n" +codes.getter_code + "}else{\n" + codes.setter_code + "\n}\n";
-            let result= new Function("data","value",code) as (data:{[index:string]:any},value?:any)=>any;
-            (<IDataAccess>result).datapath = dataPath;
+            code +="var at;\nif(value===undefined){\n" +codes.getter_code + "}else{\n" + codes.setter_code + notify_code + "\n}\n";
+            let result= new Function("data","value","sender",code) as (data:{[index:string]:any},value?:any)=>any;
             (<IDataAccess>result).superior = codes.superior;
+            (<IDataAccess>result).mappath = codes.path;
             return (<IDataAccess>result);
             
         };
-        static getOrCreate(dataPath:string):IDataAccess{
-            return AccessFactory.instance.getOrCreate(dataPath);
-        }
-        static cached(dataPath:string):IDataAccess{
-            return AccessFactory.instance.getOrCreate(dataPath);
-        }
-        static instance:AccessFactory = new AccessFactory();
+        
+        static default:AccessFactory = new AccessFactory();
     }
     function buildPropCodes(propname:string,dataPath:string,codes:any,isLast?:boolean){
         if(!propname) throw new Error("invalid dataPath 不正确的dataPath:" + dataPath);
@@ -146,7 +132,7 @@ namespace Quic{
                         //最后一个[]
                         if(isLast){
                             codes.setter_code += `\tdata[0] = value;\n`;
-                            codes.superior = codes.factory.cached(codes.path);
+                            codes.superior = codes.factory.getOrCreate(codes.path);
                         } 
                         else{
                             codes.setter_code += `\tif(!data[0]) data = data[0]={};else data=data[0];\n`;
@@ -161,7 +147,7 @@ namespace Quic{
                         //最后一个[]
                         if(isLast) {
                             codes.setter_code += `\tat = data.length?data.length-1:0;data[at]=value;\n`;
-                            codes.superior = codes.factory.cached(codes.path);
+                            codes.superior = codes.factory.getOrCreate(codes.path);
                         }
                         else{
                             codes.setter_code += `\tat = data.length?data.length-1:0; if(!data[at]) data = data[at]={};else data=data[at];\n`;
@@ -177,7 +163,7 @@ namespace Quic{
                     if(m==n){
                         //最后一个[]
                         if(isLast) {
-                            codes.superior = codes.factory.cached(codes.path);
+                            codes.superior = codes.factory.getOrCreate(codes.path);
                             codes.setter_code += `\tdata[${indexAt}]=value;\n`;
                             codes.getter_code += `\treturn data;\n`;
                         }
@@ -194,7 +180,7 @@ namespace Quic{
         }else{
             if(isLast){
                 if(codes.path!==dataPath){
-                    codes.superior = codes.factory.cached(codes.path);
+                    codes.superior = codes.factory.getOrCreate(codes.path);
                 }
                 if(propname){
                     codes.getter_code += `\treturn data.${propname};\n`;
@@ -211,5 +197,8 @@ namespace Quic{
             codes.path +=codes.path ? "." + propname:propname;
         }
     }
+    let dataPathRegx = /(?:\[(?:\d+|first|last)\])?[a-zA-Z_\$][a-zA-Z0-9_\$]*(?:\[(?:\d+|first|last)\])*(?:.[a-zA-Z_\$][a-zA-Z0-9_\$]*(?:\[(?:\d+|first|last)\])*)/g;
+    
+
 }
 exports.AccessFactory = Quic.AccessFactory;

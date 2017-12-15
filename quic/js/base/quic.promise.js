@@ -87,7 +87,7 @@ var Quic;
         self.__promise_result__ = { value: result, invocationWay: invocationWay, fullfilled: true };
         var handlers = self.__done_handlers__;
         self.__done_handlers__ = self.__done_handlers__ = undefined;
-        if (invocationWay === "quic::invocationWay.apply") {
+        if (invocationWay === "quic::apply") {
             self.then = function (done, error) {
                 if (done) {
                     done.apply(_this, result || []);
@@ -117,7 +117,7 @@ var Quic;
         }
         this.fail = function (fail) { return _this; };
         if (handlers) {
-            if (invocationWay === "quic::invocationWay.apply") {
+            if (invocationWay === "quic::apply") {
                 for (var i = 0, j = handlers.length; i < j; i++)
                     handlers.shift().apply(self, result || []);
             }

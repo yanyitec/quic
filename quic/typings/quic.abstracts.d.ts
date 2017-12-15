@@ -497,54 +497,7 @@ declare namespace Quic {
             [viewname: string]: IView;
         };
     }
-    /**
-     * 视图集合选项。创建视图集时作为参数
-     * 可以当作视图选项来用
-     * @export
-     * @interface FieldsetViewOpts
-     * @extends {ViewOpts} 可以当作视图选项来用
-     */
-    interface FieldsetViewOpts extends ViewOpts {
-        /**
-         * //要包含的域s表达式或域s配置
-         * 域表达式的例子: [id:hidden,name:validatable,pwd:validatable],person[gender:editable]
-         * @type {(string | {[fieldname:string]:FieldOpts})}
-         * @memberof FieldsetViewOpts
-         */
-        fields?: string | {
-            [fieldname: string]: FieldOpts;
-        };
-        /**
-         * 要排除的字段/域的名字
-         *
-         * @type {(string | Array<string>)}
-         * @memberof FieldsetViewOpts
-         */
-        excludes?: string | Array<string>;
-        /**
-         * //初始化数据
-         *
-         * @type {{[index:string]:any}}
-         * @memberof FieldsetViewOpts
-         */
-        initData?: {
-            [index: string]: any;
-        };
-        /**
-         * 获取/提交数据的url
-         *
-         * @type {string}
-         * @memberof FieldsetViewOpts
-         */
-        url?: string;
-        /**
-         * 获取/提交数据用的方法GET/POST/PUT etc.
-         *
-         * @type {string}
-         * @memberof FieldsetViewOpts
-         */
-        method?: string;
-    }
+    
     /**
      * 视图集。里面有多个view
      *

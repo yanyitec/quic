@@ -90,10 +90,7 @@ namespace Quic{
         }
     }
     let cached_modules :{[index:string]:Module}={};
-    export let baseUrl:string;
-    export function makeUrl(url,data?:any):string{
-        return url;
-    }
+    
     function require(...modnames):IPromise{
         let depnames:Array<string>;
         let invokeByApply:boolean = true;

@@ -7,8 +7,6 @@ declare namespace Quic {
      */
     interface IDataAccess {
         /**
-         *
-         *
          * @param {{[index:string]:any}} data 数据对象
          * @param {*} [value] 值。undefined=getter
          * @returns {*}
@@ -16,9 +14,9 @@ declare namespace Quic {
          */
         (data: {
             [index: string]: any;
-        }, value?: any): any;
-        datapath: string;
-        superior: IDataAccess;
+        }, value?: any, sender?: any): any;
+        mappath: string;
+        superior?: IDataAccess;
     }
     /**
      * 访问器工厂
@@ -28,23 +26,6 @@ declare namespace Quic {
      * @interface IAccessFactory
      */
     interface IAccessFactory {
-        /**
-         * 创建数据访问器
-         *
-         * @param {string} dataPath 数据路径
-         * @param {string} dataPath 数据路径
-         * @returns {IDataAccess} 该路径的数据访问器
-         * @memberof IAccessFactory
-         */
-        create(dataPath: string, factory?: any): IDataAccess;
-        /**
-         * 获取或创建数据访问器
-         *
-         * @param {string} dataPath 数据路径
-         * @returns {IDataAccess}  该路径的数据访问器
-         * @memberof IAccessFactory
-         */
-        cached(dataPath: string): IDataAccess;
         /**
          * 获取或创建数据访问器
          *
@@ -59,13 +40,10 @@ declare namespace Quic {
             [dataPath: string]: IDataAccess;
         };
         constructor();
-        create(dataPath: string): IDataAccess;
-        cached(datapath: string): IDataAccess;
-        getOrCreate(dataPath: string): IDataAccess;
+        getOrCreate(expr: string): IDataAccess;
         static rootAccess: IDataAccess;
-        static create(dataPath: string, factory: IAccessFactory): IDataAccess;
-        static getOrCreate(dataPath: string): IDataAccess;
-        static cached(dataPath: string): IDataAccess;
-        static instance: AccessFactory;
+        static getOrCreate(mappath: string): IDataAccess;
+        static create(dataPath: string, accessFactory?: IAccessFactory): IDataAccess;
+        static default: AccessFactory;
     }
 }

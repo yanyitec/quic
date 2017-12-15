@@ -77,39 +77,25 @@ namespace Quic{
         //位置 header_actions,footer_actions,footer_status;
         position?:string;
         /**
-         * form构建时不要label
+         * form构建时不要label等装饰元素
          * 
          * @type {boolean}
          * @memberof ViewOpts
          */
-        nolabel?:boolean;
+        nowrap?:boolean;
+
+        /**
+         * 数据映射
+         * 
+         * @type {string}
+         * @memberof ViewOpts
+         */
+        mappath?:string;
      }
 
      //export interface
 
-     /**
-      * 字段关联的视图选项
-      * 
-      * @export
-      * @interface FieldViewOpts
-      * @extends {ViewOpts}
-      */
-     export interface FieldViewOpts extends ViewOpts{
-         /**
-         * 数据映射路径，其值来源/存储在data的那个位置
-         * 
-         * @type {string}
-         * @memberof FieldViewOpts
-         */
-        mappath?:string;
-        /**
-         * 该字段显示的icon
-         * 
-         * @type {string}
-         * @memberof FieldViewOpts
-         */
-        icon?:string;
-     }
+     
 
      /**
       * 字段参数
@@ -121,7 +107,7 @@ namespace Quic{
       * @extends {ViewOpts} 可当作视图选项来使用
       */
     
-      export interface FieldOpts extends FieldViewOpts{
+      export interface FieldOpts extends ViewOpts{
         /**
          * 数据类型 默认是string
          * 
@@ -225,9 +211,15 @@ namespace Quic{
      * @interface IField
      * @extends {FieldOpts} 字段定义可当作字段定义选项来使用
      * @extends {IValidatable} 可做数据验证
-     * @extends {IDataMappable} 可做数据映射
      */
-    export interface IField extends FieldOpts,IValidatable,IDataMappable{
+    export interface IField extends FieldOpts,IValidatable{
+        /**
+         * Quic对象
+         * 
+         * @type {IQuic}
+         * @memberof IField
+         */
+        quic:IQuic ;
         /**
          * 字段集对象
          * 
@@ -252,10 +244,10 @@ namespace Quic{
         /**
          * 默认的CSS
          * 
-         * @type {ViewCSS}
+         * @type {IViewCSS}
          * @memberof IField
          */
-        CSS:ViewCSS;
+        CSS:IViewCSS;
         /**
          * 数据访问器工厂
          * 
@@ -263,13 +255,9 @@ namespace Quic{
          * @memberof IField
          */
         accessFactory:IAccessFactory;
-        /**
-         * form构建时，不要label
-         * 
-         * @type {boolean}
-         * @memberof IField
-         */
-        nolabel?:boolean;
+        
+
+        accessor:IDataAccess;
 
     }
 
@@ -347,6 +335,7 @@ namespace Quic{
     }
     
     
+    
 
      /**
       * 组合后的css
@@ -375,14 +364,14 @@ namespace Quic{
          * 
          * @param {string} [permission] 权限名
          * @returns {string} 
-         * @memberof IViewCSS
+         * @memberof IViewStateCSS
          */
         css(permission?:string):string;
         /**
          * 不带权限节的css字符串
          * 
          * @returns {string} 
-         * @memberof IViewCSS
+         * @memberof IViewStateCSS
          */
         general():string;
 
@@ -423,28 +412,40 @@ namespace Quic{
         validatable():string;
         toString():string;
     }
+
+    export interface IComposite{
+        [index:string]:IView;
+    }
+
+    export interface IView{
+        get_viewState(viewname?:string):IViewState;
+        get_view(viewname:string):IView;
+    }
+
+
     /**
      * 抽象的视图
      * 
      * @export
-     * @interface IView
+     * @interface IViewState
      * @extends {ViewOpts}
      */
-    export interface IView extends ViewOpts{
-        composition?:ICompositeView;
+    export interface IViewState extends ViewOpts,IView{
+        quic?:IQuic;
+        composition?:IViewState;
        
         /**
          * 视图将要用到的css集合
          * 
          * @type {IViewCSS}
-         * @memberof IView
+         * @memberof IViewState
          */
         CSS?:IViewCSS;
         /**
          * 呈现器，用于呈现该view
          * 
          * @type {Renderer}
-         * @memberof IView
+         * @memberof IViewState
          */
         renderer:IRenderer;
         /**
@@ -453,48 +454,29 @@ namespace Quic{
          * @param {{[index:string]:any}} data 根数据
          * @param {*} [value] 设置了该值表示setter
          * @returns {*} 
-         * @memberof IView
+         * @memberof IViewState
          */
-        mappedValue:(data:{[index:string]:any},value?:any)=>any;
+        //mappedValue:(data:{[index:string]:any},value?:any)=>any;
         /**
          * get/set 视图上的值
          * 
          * @param {*} [value] 设置了该值表示setter
          * @returns {*} 
-         * @memberof IView
+         * @memberof IViewState
          */
-        viewValue(value?:any):any;
+        //viewValue(value?:any):any;
         /**
          * 该视图对象的元素
          * 
          * @returns {HTMLElement} 
-         * @memberof IView
+         * @memberof IViewState
          */
-        element():HTMLElement; 
+        //element():HTMLElement; 
     }
 
-    export interface IFieldView extends FieldViewOpts,IView{
-         /**
-         * 该视图是根据那个field来创建的
-         * 
-         * @type {IField}
-         * @memberof IFieldView
-         */
-        field?:IField;
-        mappath?:string;
+    
 
-        /**
-         * 根据映射mappath，获取数据对象中的值
-         * 因为每个view中的mappath不一定一致
-         * 
-         * @param {{[index:string]:any}} data 
-         * @param {*} [value] 
-         * @returns {*} 
-         * @memberof IFieldView
-         */
-        mappedValue:(data:{[index:string]:any},value?:any)=>any;
-    }
-
+   
 
     /**
      * 组合视图，该视图由其他view组合而成
@@ -503,7 +485,7 @@ namespace Quic{
      * @interface ICompositeView
      * @extends {ViewOpts}
      */
-    export interface ICompositeView extends ViewOpts,IView{
+    export interface ICompositeView extends ViewOpts,IViewState{
         /**
          * 构成该视图的
          * 
@@ -511,6 +493,7 @@ namespace Quic{
          * @memberof ICompositeView
          */
         components:{[viewname:string]:IView};
+        accessFactory:IAccessFactory;
     }
 
 
