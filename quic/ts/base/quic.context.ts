@@ -155,6 +155,8 @@ namespace Quic{
          * @memberof Dom
          */
         hasClass(element:HTMLElement,css:string);    
+        show(element:HTMLElement);
+        hide(element:HTMLElement);
         bas_url():string;
         
     }

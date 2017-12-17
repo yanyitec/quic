@@ -15,19 +15,19 @@ namespace Quic{
             let text = "${prop01.prop0101}&tag=abc";
             (ExpressionFactory.default as any).accessFactory = Quic.AccessFactory.default;
             let expr = ExpressionFactory.getOrCreate(text);
-            let rs = expr(data,true);
+            let rs = expr(data,"quic:none-empty");
             new $$TEST(rs).isEqual("201&tag=abc");
             text = "name=yanyi&count=${prop01.prop0101 + i}&tag=${prop01.name}";
             expr = ExpressionFactory.getOrCreate(text);
-            rs = expr(data,true);
+            rs = expr(data,"quic:none-empty");
             new $$TEST(rs).isEqual("name=yanyi&count=213&tag=yiy");
 
             $$TEST.log("basic->pass...");
         }
 
         if(require){
-            Quic.AccessFactory = require("../base/quic.access").AccessFactory;
-            Quic.ExpressionFactory = require("../base/quic.expression").ExpressionFactory;
+            Quic.AccessFactory = require("../data/quic.access").AccessFactory;
+            Quic.ExpressionFactory = require("../data/quic.expression").ExpressionFactory;
             $$TEST = require("../base/quic.test").$$TEST;
         } 
         basic();

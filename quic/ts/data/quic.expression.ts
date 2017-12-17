@@ -1,9 +1,5 @@
 namespace Quic{
-    export interface IExpression{
-        (data:{[index:string]:any},noneToEmpty?:boolean):any;
-        text?:string;
-        deps?:Array<IDataAccess>;
-    }
+   
     export interface IExpressionFactory{
         accessFactory:IAccessFactory;
         getOrCreate(expr:string):IExpression;
@@ -15,7 +11,7 @@ namespace Quic{
             this.caches = {};
             this.accessFactory= accessFactory ;
             if(!this.accessFactory && AccessFactory){
-                this.accessFactory = AccessFactory.default;
+                this.accessFactory = new AccessFactory();
             }
         }
         getOrCreate(text:string):IExpression{
@@ -30,14 +26,15 @@ namespace Quic{
         static create(text:string,accessFactory:IAccessFactory):any{
             let rs :RegExpExecArray;
             let mappathRs:RegExpExecArray;
-            let deps :Array<IDataAccess> = [];
+            let deps :Array<IAccess> = [];
             let at:number = 0;
             let outerCode = "";
             let onlyMappathCount=0;
             let constText:string;
+            let computedText:string;
             let code = "\tvar $__RESULT__='';var $__MID_RESULT__;\n";
             while(rs=computedRegx.exec(text)){
-                let computedText = rs[0].substring(2,rs[0].length-1);
+                computedText = rs[0].substring(2,rs[0].length-1);
                 constText=text.substring(at,rs.index);
                 at += rs.index + rs[0].length;
                 if(constText!==""){
@@ -46,12 +43,15 @@ namespace Quic{
                 let mappath:string;
                 while(mappathRs=regex.exec(computedText)){
                     mappath = mappathRs[0];
+                    if(mappath===computedText && computedText.length===text.length-3){
+                        return accessFactory.getOrCreate(mappath);
+                    }
                     deps.push(accessFactory.getOrCreate(mappath));
                 }
                 if(mappath.length === computedText.length){
                     outerCode += "var $_ACCESSOR_"+onlyMappathCount+"=$__ACCESSFACTORY__.getOrCreate(\""+mappath+"\");\n";
                     code += "\t\t$__MID_RESULT__ = $_ACCESSOR_" + (onlyMappathCount++) + "($__DATA__);\n";
-                    code += `\t\tif(!$EMPTYERROR || ($__MID_RESULT__!==undefined && $__MID_RESULT__!==null)) {$__RESULT__+=$__MID_RESULT__;}\n`;
+                    code += `\t\tif($EMPTYERROR!=='quic:none-empty' || ($__MID_RESULT__!==undefined && $__MID_RESULT__!==null)) {$__RESULT__+=$__MID_RESULT__;}\n`;
                 }else {
                     code += `
         try{
@@ -62,7 +62,7 @@ namespace Quic{
             })($__DATA__);
         }catch($__EXCEPTION__){
                 Quic.ctx.warn("expression error",$__EXCEPTION__);
-                $__RESULT__ += $EMPTYERROR?"":$__EXCEPTION__.toString();
+                $__RESULT__ += $EMPTYERROR==='quic:none-empty'?"":$__EXCEPTION__.toString();
         }\n`;
                 }
             }
@@ -70,6 +70,7 @@ namespace Quic{
             if(constText!==""){
                 code += "\t$__RESULT__ +=\"" + constText.replace(/"/g,"\\\"") + "\";\n";
             }
+            
 
             code += "\treturn $__RESULT__;\n";
             let result :any;
@@ -80,7 +81,7 @@ namespace Quic{
                 result = new Function("$__ACCESSFACTORY__",outerCode)(accessFactory);
             }
             result.deps = deps;
-            result.text = text;
+            result.expression = text;
             return result as IExpression;
         }
 

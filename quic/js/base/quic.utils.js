@@ -72,26 +72,17 @@ var Quic;
         return -1;
     }
     Quic.array_index = array_index;
-    function str_replace(text, data, accessorFactory) {
-        if (text === null || text === undefined)
-            text = "";
-        else
-            text = text.toString();
-        //if(!data){ return text;}
-        var regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory = Quic.AccessFactory.default);
-        return text.replace(regx, function (m) {
-            var accessor;
-            var expr = m[1];
-            try {
-                accessor = accessorFactory.getOrCreate(expr);
+    function clone(value) {
+        if (!value)
+            return value;
+        if (typeof value === 'object') {
+            var newValue = value.length !== undefined && value.shift && value.push ? [] : {};
+            for (var n in value) {
+                newValue = clone(value[n]);
             }
-            catch (ex) {
-                Quic.ctx.warn("Invalid datapath expression:" + expr);
-                return "{INVALID:" + expr + "}";
-            }
-            return data ? accessor(data) : "";
-        });
+            return newValue;
+        }
+        return value;
     }
-    Quic.str_replace = str_replace;
+    Quic.clone = clone;
 })(Quic || (Quic = {}));

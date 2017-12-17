@@ -141,7 +141,7 @@ var Quic;
         if (!module) {
             module = new Module(name);
             cached_modules[name] = module;
-            var url = Quic.makeUrl(name);
+            var url = name; // makeUrl(name);
             var res = loadScript(url).then(function (scriptExports) {
                 if (scriptExports.__isdefine__) {
                     scriptExports.then(function (defineResults) {

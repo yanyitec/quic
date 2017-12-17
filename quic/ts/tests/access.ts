@@ -10,7 +10,8 @@ namespace Quic{
                     "prop0101":201
                 }
             };
-            let access:IDataAccess = AccessFactory.getOrCreate("prop01.prop0101");
+            //"#data"
+            let access:IAccess = AccessFactory.getOrCreate("prop01.prop0101");
             let value = access(data);
             new $$TEST(value).isEqual(201);
 
@@ -29,7 +30,7 @@ namespace Quic{
             let data :any = [1,{
                 "prop":[1,2,"yes",3]
             }];
-            let access:IDataAccess = AccessFactory.getOrCreate("[1].prop[2]");
+            let access:IAccess = AccessFactory.getOrCreate("[1].prop[2]");
             let value = access(data);
             new $$TEST(value).isEqual("yes");
             access(data,200);
@@ -54,7 +55,7 @@ namespace Quic{
         
 
         if(require){
-            Quic.AccessFactory = require("../base/quic.access").AccessFactory;
+            Quic.AccessFactory = require("../data/quic.access").AccessFactory;
 
             $$TEST = require("../base/quic.test").$$TEST;
         } 

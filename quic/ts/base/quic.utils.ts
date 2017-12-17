@@ -63,25 +63,20 @@ namespace Quic{
          return -1;
      }
 
-     
-    export function str_replace(text:any,data?:any,accessorFactory?:AccessFactory){
-        if(text===null || text===undefined) text="";
-        else text = text.toString();
-        //if(!data){ return text;}
-        let regx = /\{([a-zA-Z\$_0-9\[\].]+)\}/g;
-        accessorFactory || (accessorFactory=AccessFactory.default);
-        return text.replace(regx,function(m){
-            let accessor :(data:{[index:string]:any},value?:any)=>any;
-            let expr :string = m[1];
-            try{
-                accessor = accessorFactory.getOrCreate(expr);
-            }catch(ex){
-                ctx.warn("Invalid datapath expression:" + expr);
-                return "{INVALID:"+expr+"}";
+     export function clone(value):any{
+        if(!value) return value;
+        if(typeof value==='object'){
+            let newValue = value.length!==undefined && value.shift && value.push?[]:{};
+            for(let n in value){
+                newValue = clone(value[n]);
             }
-            return data?accessor(data):"";
-        });
+            return newValue;
+        }
+        return value;
     }
+
+     
+    
 
     
 }

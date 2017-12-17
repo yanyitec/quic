@@ -124,7 +124,7 @@ namespace Quic{
         let module = cached_modules[name];
         if(!module){
             module = new Module(name);cached_modules[name] = module;
-            let url :string = makeUrl(name);
+            let url :string =name;// makeUrl(name);
 
             let res = loadScript(url).then((scriptExports:any)=>{
                 

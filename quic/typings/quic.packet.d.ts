@@ -1,13 +1,6 @@
 declare namespace Quic {
     interface IPackage {
-        /**
-         * 获取访问器
-         *
-         * @param {string} expression
-         * @returns {*}
-         * @memberof IQuic
-         */
-        access(expression: string): Function;
+        idNo(): string;
         /**
          * 获取文本信息
          *
@@ -15,7 +8,7 @@ declare namespace Quic {
          * @param {boolean} [returnRequired]
          * @memberof IQuic
          */
-        text(key: string, returnRequired?: boolean): string;
+        _T(key: string, returnRequired?: boolean): string;
         /**
          * 字段定义
          *
@@ -25,10 +18,5 @@ declare namespace Quic {
         fields: {
             [index: string]: any;
         };
-    }
-    interface IAccess {
-        (value?: any, sender?: any): any;
-        deps: Array<string>;
-        superior: IAccess;
     }
 }

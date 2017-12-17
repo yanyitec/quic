@@ -1,25 +1,26 @@
 namespace Quic{
+    export interface IExpression{
+        (data:{[index:string]:any},noneToEmpty?:string):any;
+        expression?:string;
+        deps?:Array<IAccess>;
+    }
     /**
      * 数据访问器
      * 
      * @export
-     * @interface IDataAccess
+     * @interface IAccess
      */
-    export interface IDataAccess{
+    export interface IAccess extends IExpression{
         /**
          * @param {{[index:string]:any}} data 数据对象
          * @param {*} [value] 值。undefined=getter
          * @returns {*} 
-         * @memberof IDataAccess
+         * @memberof IAccess
          */
-        (data:{[index:string]:any},value?:any,sender?:any):any;
+        (data:{[index:string]:any},value?:any):any;
         mappath:string;
-        superior?:IDataAccess;
+        superior?:IAccess;
     }
-
-   
-
-
     
     /**
      * 访问器工厂
@@ -34,10 +35,10 @@ namespace Quic{
          * 获取或创建数据访问器
          * 
          * @param {string} dataPath 数据路径
-         * @returns {IDataAccess}  该路径的数据访问器
+         * @returns {IAccess}  该路径的数据访问器
          * @memberof IAccessFactory
          */
-        getOrCreate(datapath:string):IDataAccess;
+        getOrCreate(datapath:string):IAccess;
     }
     let self_a:any=function(data?:{[index:string]:any},value?:any){
         if(value===undefined)return data;
@@ -45,31 +46,31 @@ namespace Quic{
     }
     self_a.datapath="";
     self_a.superior = self_a;
-    let rootAccess = self_a as IDataAccess;
+    let rootAccess = self_a as IAccess;
 
     let arrRegx:RegExp =/(?:\[(?:\d+|first|last)\])+$/g;
     let trimRegx:RegExp = /(^\s+)|(\s+$)/g;
 
     export class AccessFactory implements IAccessFactory{
-        caches:{[dataPath:string]:IDataAccess};
+        caches:{[dataPath:string]:IAccess};
         
         constructor(){
             this.caches = {"":rootAccess};
         }
         
         
-        getOrCreate(expr:string):IDataAccess{
-            let accessor:IDataAccess =  this.caches[expr];
+        getOrCreate(expr:string):IAccess{
+            let accessor:IAccess =  this.caches[expr];
             if(!accessor){
                 accessor = this.caches[expr] = AccessFactory.create(expr,this);
             }
             return accessor;
         }
-        static rootAccess:IDataAccess = rootAccess;
-        static getOrCreate(mappath:string):IDataAccess{
+        static rootAccess:IAccess = rootAccess;
+        static getOrCreate(mappath:string):IAccess{
             return AccessFactory.default.getOrCreate(mappath);
         }
-        static create(dataPath:string,accessFactory?:IAccessFactory):IDataAccess {
+        static create(dataPath:string,accessFactory?:IAccessFactory):IAccess {
             if(dataPath==""){
                 return rootAccess;
             }
@@ -89,17 +90,15 @@ namespace Quic{
                 buildPropCodes(propname,dataPath,codes,false);
             }
             buildPropCodes(last_propname,dataPath,codes,true);
-            let notify_code = `
-    var change_handlers;
-    if(this && this.__valuechange__ && this.__valuechanges__ && (change_handlers=this.__valuechanges__["${dataPath}"])){
-        for(var i=0,j=change_handlers.length;i<j;i++) change_handlers[i](value,this,sender,"${dataPath}"); 
-    }`;
+            
             let code = "//" + dataPath + "\n";//"if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-            code +="var at;\nif(value===undefined){\n" +codes.getter_code + "}else{\n" + codes.setter_code + notify_code + "\n}\n";
-            let result= new Function("data","value","sender",code) as (data:{[index:string]:any},value?:any)=>any;
-            (<IDataAccess>result).superior = codes.superior;
-            (<IDataAccess>result).mappath = codes.path;
-            return (<IDataAccess>result);
+            code +="var at;\nif(value===undefined){\n" +codes.getter_code + "}else{\n" + codes.setter_code +  "\n}\n";
+            let result= new Function("data","value",code) as (data:{[index:string]:any},value?:any)=>any;
+            (<IAccess>result).superior = codes.superior;
+            (<IAccess>result).mappath = codes.path;
+            (<IAccess>result).expression = dataPath;
+            (<IAccess>result).deps = [result as IAccess];
+            return (<IAccess>result);
             
         };
         

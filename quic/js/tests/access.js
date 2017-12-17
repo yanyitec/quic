@@ -9,6 +9,7 @@ var Quic;
                     "prop0101": 201
                 }
             };
+            //"#data"
             var access = Quic.AccessFactory.getOrCreate("prop01.prop0101");
             var value = access(data);
             new $$TEST(value).isEqual(201);
@@ -42,7 +43,7 @@ var Quic;
             $$TEST.log("arr->pass");
         }
         if (require) {
-            Quic.AccessFactory = require("../base/quic.access").AccessFactory;
+            Quic.AccessFactory = require("../data/quic.access").AccessFactory;
             $$TEST = require("../base/quic.test").$$TEST;
         }
         basic();

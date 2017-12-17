@@ -1,38 +1,61 @@
 declare namespace Quic {
-    class ViewCSS implements IViewCSS {
-        constructor(viewOpts: ViewOpts);
-        raw: string;
-        base: string;
-        css(permission?: string): string;
-        general(): string;
-        visible: () => string;
-        hidden: () => string;
-        readonly: () => string;
-        editable: () => string;
-        validatable: () => string;
-        toString: () => string;
-    }
-    class View implements IFieldView {
-        name: string;
-        viewType: string;
+    interface ViewOpts {
+        perm?: string;
+        datapath?: string;
         text?: string;
-        group?: string;
-        permission?: string;
-        position?: string;
-        nolabel?: boolean;
-        mappath?: string;
+        template?: (data: any, permissionType: string) => HTMLElement | string;
         css?: string;
-        CSS?: ViewCSS;
-        renderer: IRenderer;
-        field?: IField;
-        opts: ViewOpts;
-        composition: ICompositeView;
-        mappedValue: (data: {
+        dataType?: string;
+        viewType?: string;
+        name?: string;
+        desciption?: string;
+        position?: string;
+        validations?: {
             [index: string]: any;
-        }, value?: any) => any;
-        protected _element: any;
-        constructor(quic: IQuic, composition: ICompositeView, field: IField, opts_: ViewOpts);
-        viewValue(value?: any): any;
-        element(): HTMLElement;
+        };
     }
+    interface ILocalizable {
+    }
+    class View extends Observable {
+        name: string;
+        dataType: string;
+        viewType: string;
+        validations: {
+            [index: string]: string;
+        };
+        text: string;
+        description: string;
+        idprefix: string;
+        css: string;
+        width?: number;
+        element: HTMLElement;
+        composite: View;
+        opts: ViewOpts;
+        datasource: IDataSource;
+        package: IPackage;
+        protected _permission: string;
+        protected _originPermission: string;
+        protected _validatable?: boolean;
+        protected _disabled?: Array<Node>;
+        constructor(opts: ViewOpts, composite?: View, datasource?: IDataSource, pack?: IPackage);
+        id(): string;
+        disabled(value?: boolean): boolean | this;
+        permission(value?: string): any;
+        readonly(value?: boolean): any;
+        render(decoration?: boolean): HTMLElement;
+        value(val?: any): any;
+        dispose(): void;
+        _T(key: string, returnRequired?: boolean): string;
+        protected init(opts: ViewOpts, composite?: View, datasource?: IDataSource, pack?: IPackage): void;
+        protected render_visibleonly(decoration?: boolean): HTMLElement;
+        protected render_writable(decoration?: boolean): HTMLElement;
+        protected setPermissionCss(perm: string): View;
+        static clone(src: View, cloneView: View, composite?: View, datasource?: IDataSource): View;
+        static viewTypes: {
+            [index: string]: any;
+        };
+    }
+    let viewTypes: {
+        [index: string]: any;
+    };
 }

@@ -152,6 +152,8 @@ declare namespace Quic {
          * @memberof Dom
          */
         hasClass(element: HTMLElement, css: string): any;
+        show(element: HTMLElement): any;
+        hide(element: HTMLElement): any;
         bas_url(): string;
     }
     const ctx: IContext;
