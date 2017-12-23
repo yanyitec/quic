@@ -14,13 +14,13 @@ var Quic;
     (function (Views) {
         var GridView = /** @class */ (function (_super) {
             __extends(GridView, _super);
-            function GridView(opts, composite, datasource, pack) {
-                return _super.call(this, opts, composite, datasource, pack) || this;
+            function GridView(opts, composite, model, pack) {
+                return _super.call(this, opts, composite, model, pack) || this;
             }
-            GridView.prototype.init = function (opts, composite, datasource, pack) {
+            GridView.prototype.init = function (opts, composite, model, pack) {
                 var fields = opts.fields;
                 opts.fields = null;
-                _super.prototype.init.call(this, opts, composite, datasource, pack);
+                _super.prototype.init.call(this, opts, composite, model, pack);
                 opts.fields = fields;
                 this.columns = {};
                 for (var n in fields) {
@@ -31,7 +31,6 @@ var Quic;
                 this.components = {};
             };
             GridView.prototype.render = function (decoration) {
-                var _this = this;
                 var element = Quic.ctx.createElement("div");
                 var title = this.opts.title;
                 var html = '<div class="quic-header"><span class="quic-caption">' + title + '</span><span class="quic-actions"></span></div>';
@@ -61,12 +60,12 @@ var Quic;
                 if (hrow.quic_frozen_row)
                     elems.frozenTHead.appendChild(hrow.quic_frozen_row);
                 elems.scrollableTHead.appendChild(hrow);
-                this.datasource.data().done(function (data) { return _this.refresh(); });
+                //this.datasource.data().done((data)=>this.refresh());
                 return element;
             };
             GridView.prototype.refresh = function () {
                 var columns = this.columns;
-                var rows = this.datasource.value;
+                var rows = this.model.data;
                 var html = '<div class="quic-tbody-frozen"><table><tbody></tbody></table></div>'
                     + '<div class="quic-tbody-scrollable"><table><tbody></tbody></table></div>';
                 var tbody = this.__elems.tbody;
@@ -124,6 +123,6 @@ var Quic;
             return GridView;
         }(Views.FormView));
         Views.GridView = GridView;
-        Quic.View.viewTypes.grid = GridView;
+        Views.View.viewTypes.grid = GridView;
     })(Views = Quic.Views || (Quic.Views = {}));
 })(Quic || (Quic = {}));

@@ -33,7 +33,7 @@ var Quic;
         return t;
     }
     Quic.getExactType = getExactType;
-    function extend(dest, src, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+    function extend1(dest, src, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         if (!src)
             return dest;
         if (!dest)
@@ -63,7 +63,7 @@ var Quic;
         }
         return dest;
     }
-    Quic.extend = extend;
+    Quic.extend1 = extend1;
     function array_index(arr, value) {
         for (var i = 0, j = arr.length; i < j; i++) {
             if (arr[i] === value)
@@ -72,17 +72,41 @@ var Quic;
         return -1;
     }
     Quic.array_index = array_index;
-    function clone(value) {
+    function deepClone(value) {
         if (!value)
             return value;
         if (typeof value === 'object') {
             var newValue = value.length !== undefined && value.shift && value.push ? [] : {};
             for (var n in value) {
-                newValue = clone(value[n]);
+                newValue[n] = deepClone(value[n]);
             }
             return newValue;
         }
         return value;
     }
-    Quic.clone = clone;
+    Quic.deepClone = deepClone;
+    function extend(dest, src, overrite) {
+        if (!src)
+            return dest;
+        for (var n in src) {
+            var srcValue = src[n];
+            var destValue = dest[n];
+            if (typeof srcValue === "object") {
+                if (overrite !== false || destValue === undefined) {
+                    if (typeof destValue !== "object") {
+                        destValue = dest[n] = srcValue.length !== undefined && srcValue.push && srcValue.shift ? [] : {};
+                    }
+                    extend(destValue, srcValue);
+                }
+            }
+            else {
+                if (overrite !== false || destValue === undefined) {
+                    dest[n] = srcValue;
+                }
+            }
+        }
+        //if(recordRaw===true){dest.quic_extend_from = src;} 
+        return dest;
+    }
+    Quic.extend = extend;
 })(Quic || (Quic = {}));

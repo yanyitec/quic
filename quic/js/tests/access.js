@@ -10,7 +10,7 @@ var Quic;
                 }
             };
             //"#data"
-            var access = Quic.AccessFactory.getOrCreate("prop01.prop0101");
+            var access = AccessFactory.getOrCreate("prop01.prop0101");
             var value = access(data);
             new $$TEST(value).isEqual(201);
             var supperior = access.superior;
@@ -26,7 +26,7 @@ var Quic;
             var data = [1, {
                     "prop": [1, 2, "yes", 3]
                 }];
-            var access = Quic.AccessFactory.getOrCreate("[1].prop[2]");
+            var access = AccessFactory.getOrCreate("[1].prop[2]");
             var value = access(data);
             new $$TEST(value).isEqual("yes");
             access(data, 200);

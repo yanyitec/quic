@@ -33,7 +33,7 @@ namespace Quic{
 
     
     
-    export function extend(dest:any,src:any,arg2?:any,arg3?:any,arg4?:any,arg5?:any,arg6?:any,arg7?:any,arg8?:any):any{
+    export function extend1(dest:any,src:any,arg2?:any,arg3?:any,arg4?:any,arg5?:any,arg6?:any,arg7?:any,arg8?:any):any{
          if(!src) return dest;
          if(!dest) dest=isArray(src)?[]:{};
          for(var n in src){
@@ -63,16 +63,38 @@ namespace Quic{
          return -1;
      }
 
-     export function clone(value):any{
+     export function deepClone(value):any{
         if(!value) return value;
         if(typeof value==='object'){
             let newValue = value.length!==undefined && value.shift && value.push?[]:{};
             for(let n in value){
-                newValue = clone(value[n]);
+                newValue[n] = deepClone(value[n]);
             }
             return newValue;
         }
         return value;
+    }
+    export function extend(dest:any,src:any,overrite?:boolean):any{
+        if(!src) return dest;
+        for(let n in src){
+            let srcValue = src[n];
+            let destValue = dest[n];
+            if(typeof srcValue==="object"){
+                if(overrite!==false || destValue===undefined){
+                    if(typeof destValue!=="object"){
+                        destValue = dest[n] = srcValue.length!==undefined && srcValue.push && srcValue.shift?[]:{};
+                    }
+                    extend(destValue,srcValue);
+                }
+            }else{
+                if(overrite!==false || destValue===undefined){
+                    dest[n] = srcValue;
+                }
+                
+            }
+        }
+        //if(recordRaw===true){dest.quic_extend_from = src;} 
+        return dest;
     }
 
      

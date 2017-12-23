@@ -1,0 +1,18 @@
+/// <reference path="quic.view.d.ts" />
+/// <reference path="quic.view-form.d.ts" />
+/// <reference path="quic.view-grid.d.ts" />
+declare namespace Quic {
+    namespace Views {
+        interface ColumnViewOpts extends ViewOpts {
+            frozen?: boolean;
+            resizable?: boolean;
+            width?: number;
+        }
+        class ColumnView extends FormView {
+            frozen?: boolean;
+            resizable?: boolean;
+            constructor(opts: ColumnViewOpts, grid?: GridView);
+            render(): HTMLElement;
+        }
+    }
+}

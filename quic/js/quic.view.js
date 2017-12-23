@@ -8,15 +8,18 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+/// <reference path="base/quic.observable.ts" />
+/// <reference path="base/quic.context.ts" />
+/// <reference path="quic.package.ts" />
 var Quic;
 (function (Quic) {
     var View = /** @class */ (function (_super) {
         __extends(View, _super);
-        function View(opts, composite, datasource, pack) {
+        function View(opts, composite, model, pack) {
             var _this = _super.call(this) || this;
             if (!opts)
                 return _this;
-            _this.init(opts, composite, datasource, pack);
+            _this.init(opts, composite, model, pack);
             return _this;
         }
         View.prototype.id = function () {
@@ -95,7 +98,7 @@ var Quic;
                         this.setPermissionCss("readonly");
                         this.readonly(true);
                         this._validatable = false;
-                        Quic.ctx.show(element);
+                        element.style.display = "";
                     }
                     else if (value === "writable") {
                         this.setPermissionCss("writable");
@@ -181,15 +184,13 @@ var Quic;
                 ? this.package._T(key, returnRequired)
                 : key;
         };
-        View.prototype.init = function (opts, composite, datasource, pack) {
-            var _this = this;
+        View.prototype.init = function (opts, composite, model, pack) {
             this.opts = opts;
             this.name = opts.name;
             this.dataType = opts.dataType || "text";
             this.viewType = opts.viewType || this.dataType;
             this.validations = opts.validations;
             this._permission = opts.perm;
-            this.width = opts.width;
             this.text = opts.text || this._T(this.name);
             if (opts.desciption) {
                 this.description = this._T(this.description);
@@ -197,7 +198,7 @@ var Quic;
             else
                 this.description = this.text;
             this.composite = composite;
-            if (composite && opts.fields) {
+            if (composite) {
                 this.idprefix = composite.idprefix + "_" + this.name;
             }
             else {
@@ -212,23 +213,9 @@ var Quic;
                 css += " " + this.viewType;
             css += " ";
             this.css = css;
-            this.datasource = datasource || (composite ? composite.datasource : null);
-            if (opts.datapath) {
-                if (opts.datapath[0] === "$" && opts.datapath[1] === "{" && opts.datapath[opts.datapath.length - 1] === "}") {
-                    this.value = this.datasource.expr(opts.datapath);
-                }
-                else {
-                    this.value = this.datasource.access(opts.datapath, this);
-                }
-            }
-            else {
-                this.value = function (value) {
-                    if (value === undefined) {
-                        return _this.datasource.rawData;
-                    }
-                    _this.datasource.data(value);
-                };
-            }
+            this.model = model || (composite ? composite.model : null);
+            var dataPath = opts.datapath || this.name;
+            this.value = this.model.access(opts.datapath);
             if (!(this.package = pack) && this.composite) {
                 this.package = this.composite.package;
             }
@@ -289,11 +276,11 @@ var Quic;
             this.element.className = cssText + " " + perm;
             return this;
         };
-        View.clone = function (src, cloneView, composite, datasource) {
+        View.clone = function (src, cloneView, composite, model) {
             if (!cloneView) {
                 var CLS = Quic.viewTypes[src.viewType];
                 if (!CLS)
-                    Quic.ctx.throw("invalid viewType");
+                    throw new Error("invalid viewType");
                 cloneView = new CLS(null);
             }
             cloneView.name = src.name;
@@ -313,7 +300,7 @@ var Quic;
                 cloneView.validations = valids;
             }
             cloneView.composite = composite;
-            cloneView.datasource = datasource;
+            cloneView.model = model;
             return cloneView;
         };
         View.viewTypes = { "view": View };

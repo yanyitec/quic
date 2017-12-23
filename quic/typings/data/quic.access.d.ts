@@ -1,8 +1,7 @@
 declare namespace Quic {
     interface IExpression {
-        (data: {
-            [index: string]: any;
-        }, noneToEmpty?: string): any;
+        (data: any, noneToEmpty?: string): any;
+        isAccess?: boolean;
         expression?: string;
         deps?: Array<IAccess>;
     }

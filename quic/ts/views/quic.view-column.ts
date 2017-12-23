@@ -1,3 +1,6 @@
+/// <reference path="quic.view.ts" />
+/// <reference path="quic.view-form.ts" />
+/// <reference path="quic.view-grid.ts" />
 namespace Quic{
     export namespace Views{
         export interface ColumnViewOpts extends ViewOpts{

@@ -11,22 +11,22 @@ var __extends = (this && this.__extends) || (function () {
 /// <reference path="quic.schema.ts" />
 var Quic;
 (function (Quic) {
-    var Data;
-    (function (Data) {
+    var Models;
+    (function (Models) {
         var ExpressionTypes;
         (function (ExpressionTypes) {
             ExpressionTypes[ExpressionTypes["const"] = 0] = "const";
             ExpressionTypes[ExpressionTypes["computed"] = 1] = "computed";
             ExpressionTypes[ExpressionTypes["datapath"] = 2] = "datapath";
             ExpressionTypes[ExpressionTypes["mixed"] = 3] = "mixed";
-        })(ExpressionTypes = Data.ExpressionTypes || (Data.ExpressionTypes = {}));
+        })(ExpressionTypes = Models.ExpressionTypes || (Models.ExpressionTypes = {}));
         var Expression = /** @class */ (function () {
             function Expression(type, text) {
                 this.type = type;
                 this.text = text;
             }
             Expression.parse = function (text) {
-                var exprs = parseText(text);
+                var exprs = new ExpressionParser(text).exprs;
                 if (exprs.length == 1) {
                     var expr = exprs[0];
                     return expr.path ? expr.path : expr;
@@ -35,7 +35,7 @@ var Quic;
             };
             return Expression;
         }());
-        Data.Expression = Expression;
+        Models.Expression = Expression;
         var ConstExpression = /** @class */ (function (_super) {
             __extends(ConstExpression, _super);
             function ConstExpression(constText) {
@@ -61,12 +61,12 @@ var Quic;
                     var schema = root.define(text);
                     var access = function (data, value, evt) {
                         if (value === undefined) {
-                            return schema.get_value(data, value === "quic:fill-default");
+                            //return schema.get_value(data,value==="quic:fill-default");
                         }
                         if (value === "quic:undefined") {
                             value = undefined;
                         }
-                        schema.set_value(data, value, evt);
+                        //schema.set_value(data,value,evt);
                         return this;
                     };
                     access.schema = schema;
@@ -81,7 +81,7 @@ var Quic;
             }
             return DataPathExpression;
         }(Expression));
-        Data.DataPathExpression = DataPathExpression;
+        Models.DataPathExpression = DataPathExpression;
         var ComputedExpression = /** @class */ (function (_super) {
             __extends(ComputedExpression, _super);
             function ComputedExpression(text) {
@@ -121,7 +121,7 @@ var Quic;
             }
             return ComputedExpression;
         }(Expression));
-        Data.ComputedExpression = ComputedExpression;
+        Models.ComputedExpression = ComputedExpression;
         var MixedExpression = /** @class */ (function (_super) {
             __extends(MixedExpression, _super);
             function MixedExpression(text, exprs) {
@@ -148,7 +148,7 @@ var Quic;
             }
             return MixedExpression;
         }(Expression));
-        Data.MixedExpression = MixedExpression;
+        Models.MixedExpression = MixedExpression;
         function makeMixedAccess(expr, root) {
             var _this = this;
             var accesses = [];
@@ -175,7 +175,9 @@ var Quic;
                 if (value === undefined) {
                     var rs = [];
                     for (var i in accesses) {
-                        rs.push(accesses[i].call(_this, data));
+                        var part = accesses[i].call(_this, data);
+                        if (part !== undefined && part !== null)
+                            rs.push(part);
                     }
                     return rs.join("");
                 }
@@ -199,121 +201,194 @@ var Quic;
             }
             return InvalidExpression;
         }(Error));
-        function parseText(text) {
-            var lastToken = "}";
-            var lastTokenAt = -1;
-            var branceCount = 0;
-            var line = 1;
-            var offset = 0;
-            var inString = undefined;
-            var exprs = [];
+        function expressionReader(text, parser) {
+            var offset;
+            var line;
+            var handler;
             for (var at = 0, len = text.length; at < len; at++) {
                 var char = text[at];
                 offset++;
-                if (char === "$") {
-                    //在字符串中间的跳过,在computed表达式中间的跳过
-                    if (inString || lastToken === "{") {
-                        continue;
-                    }
-                    lastToken = char;
-                    lastTokenAt = at;
-                }
-                else if (char === "{") {
-                    //在字符串中间，跳过
-                    if (inString) {
-                        continue;
-                    }
-                    if (lastToken === "}") {
-                        exprs.push(new ConstExpression(text.substring(lastTokenAt + 1, at - 1)));
-                        lastTokenAt = at;
-                        continue;
-                    }
-                    //${ }开始
-                    if (lastToken === "$" && lastTokenAt === at - 1) {
-                        lastToken = "{";
-                        lastTokenAt = at;
-                        continue;
-                    }
-                    //computed中间的{,计算个数，等待结束标记
-                    if (lastToken === "{") {
-                        branceCount++;
-                        continue;
-                    }
-                }
-                else if (char === "}") {
-                    //在字符串中间，跳过
-                    if (inString) {
-                        continue;
-                    }
-                    if (lastToken === "{") {
-                        if (branceCount === 0) {
-                            exprs.push(new ComputedExpression(text.substring(lastTokenAt + 1, at - 1)));
-                            lastToken = "}";
-                            lastTokenAt = at;
-                            continue;
-                        }
-                        else {
-                            if (--branceCount < 0) {
-                                throw new InvalidExpression("} has no matched {", text, at, line, offset);
-                            }
-                        }
-                    }
-                }
-                else if (char === "'") {
-                    if (inString === '"') {
-                        continue;
-                    }
-                    if (inString === "'") {
-                        if (text[at - 1] === "\\") {
-                            continue;
-                        }
-                        else {
-                            inString = undefined;
-                            continue;
-                        }
-                    }
-                    if (lastToken === "{") {
-                        inString = "'";
-                        continue;
-                    }
-                }
-                else if (char === '"') {
-                    if (inString === "'") {
-                        continue;
-                    }
-                    if (inString === '"') {
-                        if (text[at - 1] === "\\") {
-                            continue;
-                        }
-                        else {
-                            inString = undefined;
-                            continue;
-                        }
-                    }
-                    if (lastToken === "{") {
-                        inString = '"';
-                        continue;
-                    }
-                }
-                else if (char === "\n") {
+                if (char === "\n") {
+                    if (this.inString)
+                        throw new InvalidExpression("Carrage cannot be in string", text, at, line, offset);
                     line++;
                     offset = 0;
                 }
+                handler = parser[char];
+                if (handler) {
+                    if (handler(text, at, line, offset)) {
+                        parser.lastToken = char;
+                        parser.lastTokenAt = at;
+                    }
+                }
             }
-            if (branceCount > 0) {
-                throw new InvalidExpression("expect } before END", text, text.length, line, offset);
+            handler = parser[""];
+            if (handler) {
+                handler(text, text.length, line, offset);
             }
-            if (lastTokenAt < text.length - 1) {
-                exprs.push(new ConstExpression(text.substring(lastTokenAt + 1)));
-            }
-            return exprs;
         }
+        Models.expressionReader = expressionReader;
+        var expressionParser = {
+            "$": function (text, at, line, offset) {
+                //在字符串中间的跳过,在computed表达式中间的跳过
+                if (this.inString || this.inComputed) {
+                    return;
+                }
+                if (text[at + 1] === "{") {
+                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt + 1, at - 1)));
+                    return true;
+                }
+            },
+            "{": function (text, at, line, offset) {
+                //在字符串中间/在表达式中间，跳过
+                if (this.inString) {
+                    return;
+                }
+                if (this.inComputed) {
+                    this.braceCount++;
+                    return;
+                }
+                if (this.lastToken === "$" && this.lastTokenAt === at - 1) {
+                    this.inComputed = true;
+                    this.branceCount = 1;
+                    return true;
+                }
+            },
+            "}": function (text, at, line, offset) {
+                //在字符串中间/在表达式中间，跳过
+                if (this.inString) {
+                    return;
+                }
+                if (this.inComputed) {
+                    if (--this.braceCount == 0) {
+                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt + 1, at - 1)));
+                        this.inComputed = false;
+                        return true;
+                    }
+                }
+            },
+            "'": function (text, at, line, offset) {
+                if (this.inString === '"') {
+                    return;
+                }
+                if (this.inString === "'") {
+                    if (text[at - 1] === "\\") {
+                        return;
+                    }
+                    else {
+                        this.inString = undefined;
+                        return true;
+                    }
+                }
+                if (this.inComputed) {
+                    this.inString = "'";
+                    return true;
+                }
+            },
+            '"': function (text, at, line, offset) {
+                if (this.inString === "'") {
+                    return;
+                }
+                if (this.inString === '"') {
+                    if (text[at - 1] === "\\") {
+                        return;
+                    }
+                    else {
+                        this.inString = undefined;
+                        return true;
+                    }
+                }
+                if (this.inComputed) {
+                    this.inString = '"';
+                    return true;
+                }
+            },
+            "": function (text, at, line, offset) {
+                if (this.branceCount > 0) {
+                    throw new InvalidExpression("expect } before END", text, text.length, line, offset);
+                }
+                if (this.inComputed) {
+                    throw new InvalidExpression("JS Expression is not complete before END", text, text.length, line, offset);
+                }
+                if (this.lastTokenAt < text.length - 1) {
+                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt + 1)));
+                }
+                return true;
+            }
+        };
+        var ExpressionParser = function (text) {
+            this.exprs = [];
+            this.braceCount = 0;
+            this.lastTokenAt = -1;
+            expressionReader(text, this);
+        };
+        ExpressionParser.prototype = expressionParser;
+        var memberAccess = {
+            "meetProp": function (text, at, allowEmpty) {
+                var prop = text.substring(this.lastTokenAt + 1, at - 1);
+                if (!allowEmpty && /^\s*$/g.test(prop)) {
+                    throw new Error("Invalid MemberAccess expression:" + text);
+                }
+                var match = prop.match(propRegex);
+                if (match) {
+                    this.members.push({ name: match[1], isIndex: false });
+                    if (this.onProp)
+                        this.onProp(match[1], false);
+                    return true;
+                }
+                throw new Error("Invalid MemberAccess expression:" + text);
+            },
+            "meetIndex": function (text, at) {
+                var prop = text.substring(this.lastTokenAt + 1, at - 1);
+                var match = prop.match(numberRegex);
+                if (match) {
+                    this.members.push({ name: match[1], isIndex: true });
+                    this.onProp(match[1], true);
+                    return true;
+                }
+                throw new Error("Invalid MemberAccess expression:" + text);
+            },
+            ".": function (text, at, line, offset) {
+                if (this.lastToken === "]") {
+                    return;
+                }
+                return this.MeetProp(text, at);
+            },
+            "[": function (text, at, line, offset) {
+                if (this.lastToken === "." || this.lastToken === undefined) {
+                    return this.meetProp(text, at);
+                }
+                else {
+                    if (this.lastToken === "[")
+                        throw new Error("Invalid MemberAccess expression:" + text);
+                }
+            },
+            "]": function (text, at, line, offset) {
+                if (this.lastToken !== '[') {
+                    throw new Error("Invalid MemberAccess expression:" + text);
+                }
+                return this.meetIndex(text, at);
+            },
+            "": function (text, at, line, offset) {
+                if (this.lastToken === '[') {
+                    throw new Error("Invalid MemberAccess expression:" + text);
+                }
+                return this.meetProp(text, text.length, true);
+            }
+        };
+        var MemberAccessParser = function (text) {
+            this.members = [];
+            this.lastTokenAt = -1;
+            expressionReader(text, this);
+        };
+        MemberAccessParser.prototype = memberAccess;
+        var propRegex = /^\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*)\s*$/g;
+        var numberRegex = /\s*\d*\s*/;
         var computedRegx = /\$\{[^\}]+\}/g;
         var arrSectionRegt = "(?:\\[(?:first|last|\\d+)\\])";
         var propSectionRegt = "(?:[a-zA-Z_\\$][a-zA-Z0-9_\\$]*)";
         var regt = "(?:" + arrSectionRegt + "|" + propSectionRegt + ")(?:" + arrSectionRegt + "|(?:." + propSectionRegt + "))*";
-        var regex = new RegExp(regt, "g");
         var pathRegx = new RegExp(regt, "g");
-    })(Data = Quic.Data || (Quic.Data = {}));
+    })(Models = Quic.Models || (Quic.Models = {}));
 })(Quic || (Quic = {}));
-exports.Expression = Quic.Data.Expression;
+exports.Expression = Quic.Models.Expression;

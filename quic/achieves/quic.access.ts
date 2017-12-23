@@ -1,6 +1,7 @@
 namespace Quic{
     export interface IExpression{
-        (data:{[index:string]:any},noneToEmpty?:string):any;
+        (data:any,noneToEmpty?:string):any;
+        isAccess?:boolean;
         expression?:string;
         deps?:Array<IAccess>;
     }
@@ -46,6 +47,7 @@ namespace Quic{
     }
     self_a.datapath="";
     self_a.superior = self_a;
+    self_a.isAccess=true;
     let rootAccess = self_a as IAccess;
 
     let arrRegx:RegExp =/(?:\[(?:\d+|first|last)\])+$/g;
@@ -92,11 +94,12 @@ namespace Quic{
             buildPropCodes(last_propname,dataPath,codes,true);
             
             let code = "//" + dataPath + "\n";//"if(!data) throw new Error(\"cannot get/set value on undefined/null/0/''\"); \n";
-            code +="var at;\nif(value===undefined){\n" +codes.getter_code + "}else{\n" + codes.setter_code +  "\n}\n";
+            code +="var at;\nif(value===undefined){\n" +codes.getter_code + "}else{\nif(value==='quic:undefined'){value===undefined;}\n" + codes.setter_code +  "\n}\n";
             let result= new Function("data","value",code) as (data:{[index:string]:any},value?:any)=>any;
             (<IAccess>result).superior = codes.superior;
             (<IAccess>result).mappath = codes.path;
             (<IAccess>result).expression = dataPath;
+            (<IAccess>result).isAccess = true;
             (<IAccess>result).deps = [result as IAccess];
             return (<IAccess>result);
             

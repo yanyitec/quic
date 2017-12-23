@@ -1,3 +1,4 @@
+/// <reference path="../base/quic.promise.ts" />
 declare var $$TEST;
 declare var require;
 

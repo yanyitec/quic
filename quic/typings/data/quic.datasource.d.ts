@@ -10,15 +10,31 @@ declare namespace Quic {
         defaultSender?: any;
         rawAccess?: IAccess;
     }
+    interface IValueChangeListener {
+        (value: any, evtArgs?: any): any;
+    }
+    interface IImportItem {
+        access: ISpecializedAccess;
+        sourceAccess: (noneToEmpty?: string) => any;
+        sourceListener: IValueChangeListener;
+    }
     interface DataSourceOpts {
         data?: any;
+        url?: any;
         transport?: any;
+        imports?: any;
+        datasource?: IDataSource;
     }
-    interface IDataSource extends IPromise {
+    interface IDataSource extends IPromise, IObservable {
         opts: DataSourceOpts;
-        transport: (opts: TransportOpts) => IPromise;
+        transport?: TransportOpts;
+        value?: any;
+        dataSource?: IDataSource;
+        imports?: {
+            [index: string]: IImportItem;
+        };
         exprFactory: ExpressionFactory;
-        rawData: any;
+        incoming: any;
         fetch(): Promise;
         data(value?: any, sender?: any): Promise;
         expr(text: string): (noneToEmpty?: string) => any;
@@ -30,15 +46,21 @@ declare namespace Quic {
             [index: string]: ISpecializedAccess;
         };
         __exprs: {
-            [index: string]: (noneToEmpty?: string) => any;
+            [index: string]: IExpression;
         };
-        rawData: any;
         __fetchPromise: any;
-        __transport: any;
+        incoming: any;
+        value: any;
+        imports: {
+            [index: string]: IImportItem;
+        };
         opts: DataSourceOpts;
-        transport: (opts: TransportOpts) => IPromise;
+        transport: TransportOpts;
         exprFactory: ExpressionFactory;
-        constructor(opts: any, exprFactory?: ExpressionFactory, transport?: (opts: TransportOpts) => IPromise);
+        datasource: IDataSource;
+        constructor(opts: DataSourceOpts, exprFactory?: ExpressionFactory, transport?: (opts: TransportOpts) => IPromise);
+        protected initImports(opts: DataSourceOpts): void;
+        protected onDataArrived(incoming: any): any;
         fetch(): Promise;
         data(value?: any, sender?: any): Promise;
         expr(text: string): (noneToEmpty?: string) => any;

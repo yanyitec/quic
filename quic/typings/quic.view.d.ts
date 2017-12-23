@@ -1,3 +1,6 @@
+/// <reference path="base/quic.observable.d.ts" />
+/// <reference path="base/quic.context.d.ts" />
+/// <reference path="quic.package.d.ts" />
 declare namespace Quic {
     interface ViewOpts {
         perm?: string;
@@ -31,13 +34,13 @@ declare namespace Quic {
         element: HTMLElement;
         composite: View;
         opts: ViewOpts;
-        datasource: IDataSource;
+        model: IModel;
         package: IPackage;
         protected _permission: string;
         protected _originPermission: string;
         protected _validatable?: boolean;
         protected _disabled?: Array<Node>;
-        constructor(opts: ViewOpts, composite?: View, datasource?: IDataSource, pack?: IPackage);
+        constructor(opts: ViewOpts, composite?: View, model?: IModel, pack?: IPackage);
         id(): string;
         disabled(value?: boolean): boolean | this;
         permission(value?: string): any;
@@ -46,11 +49,11 @@ declare namespace Quic {
         value(val?: any): any;
         dispose(): void;
         _T(key: string, returnRequired?: boolean): string;
-        protected init(opts: ViewOpts, composite?: View, datasource?: IDataSource, pack?: IPackage): void;
+        protected init(opts: ViewOpts, composite?: View, model?: IModel, pack?: IPackage): void;
         protected render_visibleonly(decoration?: boolean): HTMLElement;
         protected render_writable(decoration?: boolean): HTMLElement;
         protected setPermissionCss(perm: string): View;
-        static clone(src: View, cloneView: View, composite?: View, datasource?: IDataSource): View;
+        static clone(src: View, cloneView: View, composite?: View, model?: IModel): View;
         static viewTypes: {
             [index: string]: any;
         };

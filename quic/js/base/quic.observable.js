@@ -6,8 +6,8 @@ var Quic;
         Observable.prototype.subscribe = function (nameOrHandler, handler) {
             var name;
             if (!handler) {
-                handler = nameOrHandler;
-                name = "";
+                (this.__default_event_handlers || (this.__default_event_handlers = [])).push(nameOrHandler);
+                return this;
             }
             else {
                 name = nameOrHandler;
@@ -28,10 +28,16 @@ var Quic;
             }
             var evts;
             var handlers;
-            if (!(evts = this.__event_handlers))
-                return this;
-            if (!(handlers = evts[name]))
-                return this;
+            if (name) {
+                if (!(evts = this.__event_handlers))
+                    return this;
+                if (!(handlers = evts[name]))
+                    return this;
+            }
+            else {
+                if (!(handlers = this.__default_event_handlers))
+                    return this;
+            }
             for (var i = 0, j = handlers.length; i < j; i++) {
                 var h = handlers.shift();
                 if (h !== handler)
@@ -39,14 +45,26 @@ var Quic;
             }
             return this;
         };
-        Observable.prototype.notify = function (nameOrEvtArg, evtArgs, applyInvocation) {
+        Observable.prototype.notify = function (name, evtArgs, applyInvocation) {
             var evts;
             var handlers;
-            if (!(evts = this.__event_handlers))
-                return this;
-            if (!(handlers = evts[name]))
-                return this;
-            if (applyInvocation === "quic::apply") {
+            if (name) {
+                if (!(evts = this.__event_handlers))
+                    return this;
+                if (name === "quic:all") {
+                    for (var evtname in evts) {
+                        this.notify(evtname, evtArgs, applyInvocation);
+                    }
+                    return this;
+                }
+                if (!(handlers = evts[name]))
+                    return this;
+            }
+            else {
+                if (!(handlers = this.__default_event_handlers))
+                    return this;
+            }
+            if (applyInvocation === "quic:apply") {
                 for (var i = 0, j = handlers.length; i < j; i++) {
                     var h = handlers.shift();
                     handlers.push(h);

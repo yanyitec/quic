@@ -12,12 +12,12 @@ var Quic;
                 "i": 12
             };
             var text = "${prop01.prop0101}&tag=abc";
-            Quic.ExpressionFactory.default.accessFactory = Quic.AccessFactory.default;
-            var expr = Quic.ExpressionFactory.getOrCreate(text);
+            ExpressionFactory.default.accessFactory = Quic.AccessFactory.default;
+            var expr = ExpressionFactory.getOrCreate(text);
             var rs = expr(data, "quic:none-empty");
             new $$TEST(rs).isEqual("201&tag=abc");
             text = "name=yanyi&count=${prop01.prop0101 + i}&tag=${prop01.name}";
-            expr = Quic.ExpressionFactory.getOrCreate(text);
+            expr = ExpressionFactory.getOrCreate(text);
             rs = expr(data, "quic:none-empty");
             new $$TEST(rs).isEqual("name=yanyi&count=213&tag=yiy");
             $$TEST.log("basic->pass...");

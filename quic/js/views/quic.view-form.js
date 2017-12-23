@@ -8,17 +8,15 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+/// <reference path="quic.view.ts" />
 var Quic;
 (function (Quic) {
     var Views;
     (function (Views) {
         var FormView = /** @class */ (function (_super) {
             __extends(FormView, _super);
-            function FormView(opts, composite, datasource, pack) {
-                var _this = _super.call(this, opts, composite, datasource, pack) || this;
-                if (datasource)
-                    _this.exprFactory = datasource.exprFactory;
-                return _this;
+            function FormView(opts, composite, model, pack) {
+                return _super.call(this, opts, composite, model, pack) || this;
             }
             FormView.prototype.permission = function (value) {
                 if (value === undefined) {
@@ -111,8 +109,8 @@ var Quic;
             FormView.prototype.render_writable = function (decoration) {
                 return this.render(decoration);
             };
-            FormView.prototype.init = function (opts, composite, datasource, pack) {
-                _super.prototype.init.call(this, opts, composite, datasource, pack);
+            FormView.prototype.init = function (opts, composite, model, pack) {
+                _super.prototype.init.call(this, opts, composite, model, pack);
                 this.components = {};
                 if (opts.fields) {
                     var compoments = this.components = {};
@@ -120,18 +118,19 @@ var Quic;
                     for (var viewname in children) {
                         var child = children[viewname];
                         var viewType = child.viewType || child.dataType || "text";
-                        var ViewCls = Quic.viewTypes[viewType] || Quic.viewTypes[viewType = "text"];
+                        var ViewCls = Views.viewTypes[viewType] || Views.viewTypes[viewType = "text"];
                         child.viewType = viewType;
                         if (opts.name && opts.name != viewname) {
                             Quic.ctx.throw("View name in opts is different from components");
                         }
-                        compoments[viewname] = new Quic.View(child, this);
+                        compoments[viewname] = new Views.View(child, this);
                     }
                 }
             };
             return FormView;
-        }(Quic.View));
+        }(Views.View));
         Views.FormView = FormView;
-        Quic.View.viewTypes.form = FormView;
+        Views.View.viewTypes.form = FormView;
     })(Views = Quic.Views || (Quic.Views = {}));
 })(Quic || (Quic = {}));
+exports.FormView = Quic.Views.FormView;

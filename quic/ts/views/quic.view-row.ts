@@ -1,13 +1,16 @@
+/// <reference path="quic.view.ts" />
+/// <reference path="quic.view-column.ts" />
+/// <reference path="quic.view-grid.ts" />
 namespace Quic{
     export namespace Views{
         export class RowView extends FormView{
             columns:{[index:string]:ColumnView};
             index:number;
-            constructor(grid:GridView,rowIndex:number,dataSource:IDataSource){
+            constructor(grid:GridView,rowIndex:number,model:Models.IModel){
                 super(null);
                 this.opts = grid.opts;
                 this.composite = grid;
-                this.datasource = dataSource;
+                this.model = model;
                 this.package = grid.package;
                 this.index = rowIndex;
                 this.components={};
@@ -25,7 +28,7 @@ namespace Quic{
                 return RowView.renderCells(this.components,"td");
             }
             dispose(){
-                this.datasource.dispose();
+                //this.datasource.dispose();
             }
             static renderCells(fields:{[index:string]:View},tagName:string):HTMLTableRowElement{
                 let scrollableRow = ctx.createElement("tr") as HTMLTableRowElement;

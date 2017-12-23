@@ -1,6 +1,6 @@
 /// <reference path="quic.schema.d.ts" />
 declare namespace Quic {
-    namespace Data {
+    namespace Models {
         enum ExpressionTypes {
             const = 0,
             computed = 1,
@@ -37,5 +37,15 @@ declare namespace Quic {
             expr: Expression;
             exprs: Array<Expression>;
         }
+        interface IParser {
+            lastToken: string;
+            lastTokenAt: number;
+            inString: boolean;
+        }
+        interface IMember {
+            name: string;
+            isIndex?: boolean;
+        }
+        function expressionReader(text: string, parser: IParser): void;
     }
 }

@@ -1,3 +1,4 @@
+/// <reference path="quic.view.ts" />
 namespace Quic{
     export namespace Views{
         export interface FormViewOpts extends ViewOpts{
@@ -7,11 +8,13 @@ namespace Quic{
             title?:string;
         }
         export class FormView extends View{
+            private __disabled:Array<Node>;
+
             opts:FormViewOpts;
             components:{[index:string]:View};
-            private __disabled:Array<Node>;
-            constructor(opts:FormViewOpts,composite?:View,datasource?:IDataSource,pack?:IPackage){
-                super(opts,composite,datasource,pack);
+            
+            constructor(opts:FormViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
+                super(opts,composite,model,pack);
             }
             permission(value?:string):any{
                 if(value===undefined) {
@@ -96,8 +99,8 @@ namespace Quic{
                 return this.render(decoration);
             }
     
-            protected init(opts:FormViewOpts,composite?:View,datasource?:IDataSource,pack?:IPackage){
-                super.init(opts, composite, datasource,pack);
+            protected init(opts:FormViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
+                super.init(opts, composite, model,pack);
                 this.components = {};
                 if(opts.fields){
                     let compoments = this.components ={};
@@ -117,3 +120,4 @@ namespace Quic{
         View.viewTypes.form = FormView; 
     }
 }
+exports.FormView = Quic.Views.FormView;
