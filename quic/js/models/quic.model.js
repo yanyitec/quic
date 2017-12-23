@@ -43,7 +43,7 @@ var Quic;
                         innerAccess = Models.Expression.parse(text).genAccess(this._$schema);
                     }
                     else {
-                        innerAccess = new Models.DataPathExpression(text).genAccess(this._$schema);
+                        innerAccess = new Models.MemberAccessExpression(text).genAccess(this._$schema);
                     }
                     var dataValue_1 = innerAccess(this);
                     access = function (value, evt) {

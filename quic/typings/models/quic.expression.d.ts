@@ -23,12 +23,13 @@ declare namespace Quic {
             protected constructor(type: ExpressionTypes, text: string);
             static parse(text: string): Expression;
         }
-        class DataPathExpression extends Expression {
+        class MemberAccessExpression extends Expression {
+            members: Array<IMember>;
             constructor(text: string);
         }
         class ComputedExpression extends Expression {
-            paths: Array<DataPathExpression>;
-            path: DataPathExpression;
+            paths: Array<MemberAccessExpression>;
+            path: MemberAccessExpression;
             constructor(text: string);
         }
         class MixedExpression extends Expression {

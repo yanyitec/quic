@@ -20,9 +20,12 @@ var Quic;
             new $$TEST(members[4]).prop("name", "def").prop("isIndex", false);
             expr = "def[2]";
             members = new Quic.Models.MemberAccessParser(expr).members;
-            new $$TEST(members).isExists().length(2);
-            new $$TEST(members[0]).prop("name", "def").prop("isIndex", false);
-            new $$TEST(members[1]).prop("name", "2").prop("isIndex", true);
+            $$TEST.log("quic.expression[member]->pass");
+        }
+        function expr() {
+            $$TEST.log("quic.expression[expr]->test");
+            var expr = "abc.def${ok}${alias[0] +'\"' + No[0].def}";
+            var exprs = new Quic.Models.ExpressionParser(expr).exprs;
             $$TEST.log("quic.expression[member]->pass");
         }
         if (require) {
@@ -31,6 +34,7 @@ var Quic;
             (Quic.Models || (Quic.Models = {})).MemberAccessParser = require("../models/quic.expression").MemberAccessParser;
             $$TEST = require("../base/quic.test").$$TEST;
         }
-        member();
+        //member();
+        expr();
     })(Tests || (Tests = {}));
 })(Quic || (Quic = {}));

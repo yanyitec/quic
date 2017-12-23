@@ -48,7 +48,7 @@ namespace Quic{
                     if(mixed===true){
                         innerAccess = Expression.parse(text).genAccess(this._$schema);
                     }else {
-                        innerAccess = new DataPathExpression(text).genAccess(this._$schema);
+                        innerAccess = new MemberAccessExpression(text).genAccess(this._$schema);
                     }
                     let dataValue :IDataValue =innerAccess(this);
                     access = (value?:any,evt?:any):any=>{

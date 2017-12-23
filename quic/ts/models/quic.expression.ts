@@ -40,76 +40,40 @@ namespace Quic{
         class ConstExpression extends Expression{
             constructor(constText:string){
                 super(ExpressionTypes.const,constText);
-                this.genAccess =(root:ISchema)=>{
-                    let access:IAccess = (data)=>constText;
-                    access.type = this.type;
-                    access.text = constText;
-                    access.expr = this;
-                    access.root = root;
-                    //access.schema = new Schema("quic-schema-"+idNo(),root);
-                    return access;
-                }
             }
             text:string;
         }
-        export class DataPathExpression extends Expression{
+        export class MemberAccessExpression extends Expression{
+            members:Array<IMember>;
             constructor(text:string){
                 super(ExpressionTypes.datapath,text);
-                this.genAccess =(root:ISchema)=>{
-                    let schema = root.define(text);
-                    let access :IAccess =function(data:any,value?:any,evt?:any){
-                        if(value===undefined){
-                            //return schema.get_value(data,value==="quic:fill-default");
-                        }
-                        if(value==="quic:undefined") {value=undefined;}
-                        //schema.set_value(data,value,evt);
-                        return this;
-                    };
-                    access.schema =schema;
-                    access.type = this.type;
-                    access.text = text;
-                    access.expr = this;
-                    access.root = root;
-                    access.isDataPath = true;
-                    return access;
-                };
+                this.members = new MemberAccessParser(text).members;
             }
         }
+        let jsKeywords = ["if","var","switch","case","for","return","with"];
         export class ComputedExpression extends Expression{
-            paths:Array<DataPathExpression>;
-            path:DataPathExpression;
+            paths:Array<MemberAccessExpression>;
+            path:MemberAccessExpression;
             constructor(text:string){
                 super(ExpressionTypes.computed,text);
                 let match:RegExpMatchArray;let path:string;
+                pathRegx.lastIndex=0;
                 while(match=pathRegx.exec(text)){
                     path = match[0];
                     if(!this.paths) {this.paths=[];}
-                    this.paths.push(new DataPathExpression(path)); 
+                    let isKeyword = false;
+                    for(let i=0,j=jsKeywords.length;i<j;i++){
+                        if(jsKeywords[i] ===path){isKeyword=true;break;} 
+                    }
+                    if(isKeyword){continue;}
+                    this.paths.push(new MemberAccessExpression(path)); 
                 }
                 if(path && path.length===text.length-3){
                     this.path = this.paths[0];
                 }                
                 let code = "try{\n\twith($__DATA__){\n\t\treturn "+text+"\t}\n}"
                 +"catch($__EXCEPTION__){\n\treturn $__EXCEPTION__;\n}\n";
-                this.genAccess = (root:ISchema)=>{
-                    let access:IAccess = this.path? this.path.genAccess(root): new Function("$__DATA__",code) as any;
-                    access.type = this.type;
-                    access.text = text;
-                    access.expr = this;
-                    access.root = root;
-                    
-                    if(this.paths && !this.path){
-                        let deps :Array<ISchema>=[];
-                        for(let i in this.paths){
-                            let path = this.paths[i];
-                            let dep = root.define(path.text);
-                            deps.push(dep);
-                        }
-                        access.deps=deps;
-                    }
-                    
-                    return access;
-                }
+                
             }
             
         }
@@ -120,19 +84,7 @@ namespace Quic{
                 if(exprs.length===1) {
                     this.expr = exprs[0];
                 }
-                this.genAccess = (root:ISchema)=>{
-                    let access :IAccess
-                    if(this.expr){
-                        access = this.expr.genAccess(root);
-                    }else{
-                        access = makeMixedAccess(this,root);
-                    }
-                    access.type = this.type;
-                    access.text = text;
-                    access.expr = this;
-                    access.root = root;
-                    return access;
-                };
+                
             }
             expr:Expression;
             exprs:Array<Expression>;
@@ -228,7 +180,8 @@ namespace Quic{
                 //在字符串中间的跳过,在computed表达式中间的跳过
                 if(this.inString || this.inComputed) {return;}
                 if(text[at+1]==="{"){
-                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt+1,at)));
+                    let constText = text.substring(this.lastTokenAt+1,at);
+                    if(constText)this.exprs.push(new ConstExpression(constText));
                     return true;
                 }
                 
@@ -239,7 +192,7 @@ namespace Quic{
                 if(this.inComputed){ this.braceCount++; return;}
                 if(this.lastToken==="$" && this.lastTokenAt===at-1){
                     this.inComputed = true;
-                    this.branceCount=1;
+                    this.braceCount=1;
                     return true;
                 }
             },
@@ -259,11 +212,11 @@ namespace Quic{
                 if(this.inString==="'"){
                     if(text[at-1]==="\\"){return;}
                     else {
-                        this.inString = undefined;return true;
+                        this.inString = undefined;return ;
                     }
                 }
                 if(this.inComputed){
-                    this.inString="'";return true;
+                    this.inString="'";return ;
                 }
             },
             '"':function(text:string,at:number,line:number,offset:number){
@@ -271,17 +224,14 @@ namespace Quic{
                 if(this.inString==='"'){
                     if(text[at-1]==="\\"){return;}
                     else {
-                        this.inString = undefined;return true;
+                        this.inString = undefined;return;
                     }
                 }
                 if(this.inComputed){
-                    this.inString='"';return true;
+                    this.inString='"';return;
                 }
             },
             "":function(text:string,at:number,line:number,offset:number){
-                if(this.branceCount>0){
-                    throw new InvalidExpression("expect } before END",text,text.length,line,offset);
-                }
                 if(this.inComputed){
                     throw new InvalidExpression("JS Expression is not complete before END",text,text.length,line,offset);
                 }
@@ -371,7 +321,7 @@ namespace Quic{
         let computedRegx = /\$\{[^\}]+\}/g;
         let arrSectionRegt = "(?:\\[(?:first|last|\\d+)\\])";
         let propSectionRegt = "(?:[a-zA-Z_\\$][a-zA-Z0-9_\\$]*)";
-        let regt =   "(?:"+arrSectionRegt + "|" + propSectionRegt+")(?:"+arrSectionRegt + "|(?:." +propSectionRegt+"))*";
+        let regt =   "(?:"+propSectionRegt+")(?:"+arrSectionRegt + "|(?:." +propSectionRegt+"))*";
         let pathRegx :RegExp = new RegExp(regt,"g");
     }
     

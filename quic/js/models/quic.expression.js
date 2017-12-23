@@ -38,84 +38,50 @@ var Quic;
         var ConstExpression = /** @class */ (function (_super) {
             __extends(ConstExpression, _super);
             function ConstExpression(constText) {
-                var _this = _super.call(this, ExpressionTypes.const, constText) || this;
-                _this.genAccess = function (root) {
-                    var access = function (data) { return constText; };
-                    access.type = _this.type;
-                    access.text = constText;
-                    access.expr = _this;
-                    access.root = root;
-                    //access.schema = new Schema("quic-schema-"+idNo(),root);
-                    return access;
-                };
-                return _this;
+                return _super.call(this, ExpressionTypes.const, constText) || this;
             }
             return ConstExpression;
         }(Expression));
-        var DataPathExpression = /** @class */ (function (_super) {
-            __extends(DataPathExpression, _super);
-            function DataPathExpression(text) {
+        var MemberAccessExpression = /** @class */ (function (_super) {
+            __extends(MemberAccessExpression, _super);
+            function MemberAccessExpression(text) {
                 var _this = _super.call(this, ExpressionTypes.datapath, text) || this;
-                _this.genAccess = function (root) {
-                    var schema = root.define(text);
-                    var access = function (data, value, evt) {
-                        if (value === undefined) {
-                            //return schema.get_value(data,value==="quic:fill-default");
-                        }
-                        if (value === "quic:undefined") {
-                            value = undefined;
-                        }
-                        //schema.set_value(data,value,evt);
-                        return this;
-                    };
-                    access.schema = schema;
-                    access.type = _this.type;
-                    access.text = text;
-                    access.expr = _this;
-                    access.root = root;
-                    access.isDataPath = true;
-                    return access;
-                };
+                _this.members = new Models.MemberAccessParser(text).members;
                 return _this;
             }
-            return DataPathExpression;
+            return MemberAccessExpression;
         }(Expression));
-        Models.DataPathExpression = DataPathExpression;
+        Models.MemberAccessExpression = MemberAccessExpression;
+        var jsKeywords = ["if", "var", "switch", "case", "for", "return", "with"];
         var ComputedExpression = /** @class */ (function (_super) {
             __extends(ComputedExpression, _super);
             function ComputedExpression(text) {
                 var _this = _super.call(this, ExpressionTypes.computed, text) || this;
                 var match;
                 var path;
+                pathRegx.lastIndex = 0;
                 while (match = pathRegx.exec(text)) {
                     path = match[0];
                     if (!_this.paths) {
                         _this.paths = [];
                     }
-                    _this.paths.push(new DataPathExpression(path));
+                    var isKeyword = false;
+                    for (var i = 0, j = jsKeywords.length; i < j; i++) {
+                        if (jsKeywords[i] === path) {
+                            isKeyword = true;
+                            break;
+                        }
+                    }
+                    if (isKeyword) {
+                        continue;
+                    }
+                    _this.paths.push(new MemberAccessExpression(path));
                 }
                 if (path && path.length === text.length - 3) {
                     _this.path = _this.paths[0];
                 }
                 var code = "try{\n\twith($__DATA__){\n\t\treturn " + text + "\t}\n}"
                     + "catch($__EXCEPTION__){\n\treturn $__EXCEPTION__;\n}\n";
-                _this.genAccess = function (root) {
-                    var access = _this.path ? _this.path.genAccess(root) : new Function("$__DATA__", code);
-                    access.type = _this.type;
-                    access.text = text;
-                    access.expr = _this;
-                    access.root = root;
-                    if (_this.paths && !_this.path) {
-                        var deps = [];
-                        for (var i in _this.paths) {
-                            var path_1 = _this.paths[i];
-                            var dep = root.define(path_1.text);
-                            deps.push(dep);
-                        }
-                        access.deps = deps;
-                    }
-                    return access;
-                };
                 return _this;
             }
             return ComputedExpression;
@@ -129,20 +95,6 @@ var Quic;
                 if (exprs.length === 1) {
                     _this.expr = exprs[0];
                 }
-                _this.genAccess = function (root) {
-                    var access;
-                    if (_this.expr) {
-                        access = _this.expr.genAccess(root);
-                    }
-                    else {
-                        access = makeMixedAccess(_this, root);
-                    }
-                    access.type = _this.type;
-                    access.text = text;
-                    access.expr = _this;
-                    access.root = root;
-                    return access;
-                };
                 return _this;
             }
             return MixedExpression;
@@ -234,7 +186,9 @@ var Quic;
                     return;
                 }
                 if (text[at + 1] === "{") {
-                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt + 1, at)));
+                    var constText = text.substring(this.lastTokenAt + 1, at);
+                    if (constText)
+                        this.exprs.push(new ConstExpression(constText));
                     return true;
                 }
             },
@@ -249,7 +203,7 @@ var Quic;
                 }
                 if (this.lastToken === "$" && this.lastTokenAt === at - 1) {
                     this.inComputed = true;
-                    this.branceCount = 1;
+                    this.braceCount = 1;
                     return true;
                 }
             },
@@ -276,12 +230,12 @@ var Quic;
                     }
                     else {
                         this.inString = undefined;
-                        return true;
+                        return;
                     }
                 }
                 if (this.inComputed) {
                     this.inString = "'";
-                    return true;
+                    return;
                 }
             },
             '"': function (text, at, line, offset) {
@@ -294,18 +248,15 @@ var Quic;
                     }
                     else {
                         this.inString = undefined;
-                        return true;
+                        return;
                     }
                 }
                 if (this.inComputed) {
                     this.inString = '"';
-                    return true;
+                    return;
                 }
             },
             "": function (text, at, line, offset) {
-                if (this.branceCount > 0) {
-                    throw new InvalidExpression("expect } before END", text, text.length, line, offset);
-                }
                 if (this.inComputed) {
                     throw new InvalidExpression("JS Expression is not complete before END", text, text.length, line, offset);
                 }
@@ -399,7 +350,7 @@ var Quic;
         var computedRegx = /\$\{[^\}]+\}/g;
         var arrSectionRegt = "(?:\\[(?:first|last|\\d+)\\])";
         var propSectionRegt = "(?:[a-zA-Z_\\$][a-zA-Z0-9_\\$]*)";
-        var regt = "(?:" + arrSectionRegt + "|" + propSectionRegt + ")(?:" + arrSectionRegt + "|(?:." + propSectionRegt + "))*";
+        var regt = "(?:" + propSectionRegt + ")(?:" + arrSectionRegt + "|(?:." + propSectionRegt + "))*";
         var pathRegx = new RegExp(regt, "g");
     })(Models = Quic.Models || (Quic.Models = {}));
 })(Quic || (Quic = {}));

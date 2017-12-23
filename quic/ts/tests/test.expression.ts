@@ -24,6 +24,14 @@ namespace Quic{
             $$TEST.log("quic.expression[member]->pass");
         }
 
+        function expr(){
+            $$TEST.log("quic.expression[expr]->test");
+            let expr = "abc.def${ok}${alias[0] +'\"' + No[0].def}";
+            let exprs = new Quic.Models.ExpressionParser(expr).exprs;
+            
+            $$TEST.log("quic.expression[member]->pass");
+        }
+
         
 
         if(require){
@@ -33,6 +41,8 @@ namespace Quic{
             
             $$TEST = require("../base/quic.test").$$TEST;
         } 
-        member();
+        
+        //member();
+        expr();
     }
 }
