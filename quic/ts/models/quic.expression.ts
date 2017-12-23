@@ -1,5 +1,5 @@
 
-/// <reference path="quic.schema.ts" />
+
 namespace Quic{
     export namespace Models{
         
@@ -211,7 +211,7 @@ namespace Quic{
                 }
                 handler = (<any>parser)[char] as Function;
                 if(handler){
-                    if( handler(text,at,line,offset)){
+                    if( handler.call(parser,text,at,line,offset)){
                         parser.lastToken = char;
                         parser.lastTokenAt = at;
                     }
@@ -219,7 +219,7 @@ namespace Quic{
             }
             handler=(<any>parser)[""] as Function;
             if(handler) {
-                handler(text,text.length,line,offset);
+                handler.call(parser,text,text.length,line,offset);
             }
 
         } 
@@ -228,7 +228,7 @@ namespace Quic{
                 //在字符串中间的跳过,在computed表达式中间的跳过
                 if(this.inString || this.inComputed) {return;}
                 if(text[at+1]==="{"){
-                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt+1,at-1)));
+                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt+1,at)));
                     return true;
                 }
                 
@@ -248,7 +248,7 @@ namespace Quic{
                 if(this.inString ) {return;}
                 if(this.inComputed){
                     if(--this.braceCount==0){
-                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt+1,at-1)));
+                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt+1,at)));
                         this.inComputed=false;
                         return true;
                     }
@@ -291,7 +291,7 @@ namespace Quic{
                 return true;
             }
         }
-        let ExpressionParser = function(text:string){
+        export let ExpressionParser = function(text:string){
             this.exprs =[];
             this.braceCount=0;
             this.lastTokenAt=-1;
@@ -301,11 +301,16 @@ namespace Quic{
 
         let memberAccess = {
             "meetProp":function(text:string,at:number,allowEmpty?:boolean){
-                let prop = text.substring(this.lastTokenAt+1,at-1);
-                if(!allowEmpty && /^\s*$/g.test(prop)){
-                    throw new Error("Invalid MemberAccess expression:" + text);
+                let prop = text.substring(this.lastTokenAt+1,at);
+                if(/^\s*$/g.test(prop)){
+                    if(allowEmpty){
+                        return true;
+                    }else{
+                        throw new Error("Invalid MemberAccess expression:" + text);
+                    } 
                 }
-                let match = prop.match(propRegex);
+                propRegex.lastIndex=0;
+                let match = propRegex.exec(prop);
                 if(match){
                     this.members.push({name:match[1],isIndex:false});
                     if(this.onProp)this.onProp(match[1],false);
@@ -315,24 +320,30 @@ namespace Quic{
                 throw new Error("Invalid MemberAccess expression:" + text);
             },
             "meetIndex":function(text:string,at:number){
-                let prop = text.substring(this.lastTokenAt+1,at-1);
-                let match = prop.match(numberRegex);
+                let prop = text.substring(this.lastTokenAt+1,at);
+                numberRegex.lastIndex = 0;
+                let match = numberRegex.exec(prop);
                 if(match){
                     this.members.push({name:match[1],isIndex:true});
-                    this.onProp(match[1],true);
+                    if(this.onProp)this.onProp(match[1],true);
                     return true;
                 } 
                 throw new Error("Invalid MemberAccess expression:" + text);
             },
             ".":function(text:string,at:number,line:number,offset:number){
-                if(this.lastToken==="]"){return;}
-                return this.MeetProp(text,at);
+                if(this.lastToken==="]"){return true;}
+                return this.meetProp(text,at);
             },
             "[":function(text:string,at:number,line:number,offset:number){
                 if(this.lastToken==="." || this.lastToken===undefined){
-                    return this.meetProp(text,at);
+                    return this.meetProp(text,at,this.lastToken===undefined);
                 }else {
                     if(this.lastToken==="[") throw new Error("Invalid MemberAccess expression:" +text);
+                    let word = text.substring(this.lastTokenAt+1,at);
+                    if(!/^\s*$/g.test(word)){
+                        throw new Error("Invalid MemberAccess expression:" +text);
+                    }
+                    return true;
                 }
             },
             "]":function(text:string,at:number,line:number,offset:number){
@@ -348,7 +359,7 @@ namespace Quic{
                 return this.meetProp(text,text.length,true);
             }
         }
-        let MemberAccessParser = function(text:string){
+        export let MemberAccessParser = function(text:string){
             this.members =[];
             this.lastTokenAt=-1;
             expressionReader(text,this);
@@ -356,7 +367,7 @@ namespace Quic{
         MemberAccessParser.prototype = memberAccess;
 
         let propRegex = /^\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*)\s*$/g;
-        let numberRegex = /\s*\d*\s*/;
+        let numberRegex = /\s*(\d*)\s*/;
         let computedRegx = /\$\{[^\}]+\}/g;
         let arrSectionRegt = "(?:\\[(?:first|last|\\d+)\\])";
         let propSectionRegt = "(?:[a-zA-Z_\\$][a-zA-Z0-9_\\$]*)";
@@ -366,3 +377,5 @@ namespace Quic{
     
 }
 exports.Expression = Quic.Models.Expression;
+exports.ExpressionParser = Quic.Models.ExpressionParser;
+exports.MemberAccessParser = Quic.Models.MemberAccessParser;

@@ -1,5 +1,5 @@
 export declare class $$TestFailException extends Error {
-    constructor(message?: string, value1?: any, value2?: any);
+    constructor(message?: string, value1?: any, value2?: any, value3?: any);
 }
 export declare class $$TEST {
     static log(msg: string): void;
@@ -7,6 +7,8 @@ export declare class $$TEST {
     static run(obj: any, msg?: string, tab?: string): void;
     value?: any;
     constructor(value: any);
+    prop(name: any, value?: any): $$TEST;
+    length(len: number, message?: string): this;
     isNone(message?: string): $$TEST;
     isExists(message?: string): $$TEST;
     isEmpty(message?: string): $$TEST;

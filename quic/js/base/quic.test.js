@@ -12,8 +12,9 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var $$TestFailException = /** @class */ (function (_super) {
     __extends($$TestFailException, _super);
-    function $$TestFailException(message, value1, value2) {
-        return _super.call(this, message ? message.replace(/\{0\}/g, value1).replace(/\{1\}/g, value2) : "Test failed.") || this;
+    function $$TestFailException(message, value1, value2, value3) {
+        return _super.call(this, message ? message.replace(/\{0\}/g, value1)
+            .replace(/\{1\}/g, value2).replace(/\{2\}/g, value3) : "Test failed.") || this;
     }
     return $$TestFailException;
 }(Error));
@@ -47,6 +48,21 @@ var $$TEST = /** @class */ (function () {
                 $$TEST.run(obj[i], i, tab);
             }
         }
+    };
+    $$TEST.prototype.prop = function (name, value) {
+        if (value === undefined) {
+            return new $$TEST(this.value[name]);
+        }
+        if (this.value[name] !== value) {
+            throw new $$TestFailException("expect:{0}.{1} is {2}", this.value, name, value);
+        }
+        return this;
+    };
+    $$TEST.prototype.length = function (len, message) {
+        if (this.value.length !== len) {
+            throw new $$TestFailException(message || "expect:{0}.length is {1}", this.value, len);
+        }
+        return this;
     };
     $$TEST.prototype.isNone = function (message) {
         if (this.value) {

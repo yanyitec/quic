@@ -8,7 +8,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-/// <reference path="quic.schema.ts" />
 var Quic;
 (function (Quic) {
     var Models;
@@ -26,7 +25,7 @@ var Quic;
                 this.text = text;
             }
             Expression.parse = function (text) {
-                var exprs = new ExpressionParser(text).exprs;
+                var exprs = new Models.ExpressionParser(text).exprs;
                 if (exprs.length == 1) {
                     var expr = exprs[0];
                     return expr.path ? expr.path : expr;
@@ -216,7 +215,7 @@ var Quic;
                 }
                 handler = parser[char];
                 if (handler) {
-                    if (handler(text, at, line, offset)) {
+                    if (handler.call(parser, text, at, line, offset)) {
                         parser.lastToken = char;
                         parser.lastTokenAt = at;
                     }
@@ -224,7 +223,7 @@ var Quic;
             }
             handler = parser[""];
             if (handler) {
-                handler(text, text.length, line, offset);
+                handler.call(parser, text, text.length, line, offset);
             }
         }
         Models.expressionReader = expressionReader;
@@ -235,7 +234,7 @@ var Quic;
                     return;
                 }
                 if (text[at + 1] === "{") {
-                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt + 1, at - 1)));
+                    this.exprs.push(new ConstExpression(text.substring(this.lastTokenAt + 1, at)));
                     return true;
                 }
             },
@@ -261,7 +260,7 @@ var Quic;
                 }
                 if (this.inComputed) {
                     if (--this.braceCount == 0) {
-                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt + 1, at - 1)));
+                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt + 1, at)));
                         this.inComputed = false;
                         return true;
                     }
@@ -316,20 +315,26 @@ var Quic;
                 return true;
             }
         };
-        var ExpressionParser = function (text) {
+        Models.ExpressionParser = function (text) {
             this.exprs = [];
             this.braceCount = 0;
             this.lastTokenAt = -1;
             expressionReader(text, this);
         };
-        ExpressionParser.prototype = expressionParser;
+        Models.ExpressionParser.prototype = expressionParser;
         var memberAccess = {
             "meetProp": function (text, at, allowEmpty) {
-                var prop = text.substring(this.lastTokenAt + 1, at - 1);
-                if (!allowEmpty && /^\s*$/g.test(prop)) {
-                    throw new Error("Invalid MemberAccess expression:" + text);
+                var prop = text.substring(this.lastTokenAt + 1, at);
+                if (/^\s*$/g.test(prop)) {
+                    if (allowEmpty) {
+                        return true;
+                    }
+                    else {
+                        throw new Error("Invalid MemberAccess expression:" + text);
+                    }
                 }
-                var match = prop.match(propRegex);
+                propRegex.lastIndex = 0;
+                var match = propRegex.exec(prop);
                 if (match) {
                     this.members.push({ name: match[1], isIndex: false });
                     if (this.onProp)
@@ -339,28 +344,35 @@ var Quic;
                 throw new Error("Invalid MemberAccess expression:" + text);
             },
             "meetIndex": function (text, at) {
-                var prop = text.substring(this.lastTokenAt + 1, at - 1);
-                var match = prop.match(numberRegex);
+                var prop = text.substring(this.lastTokenAt + 1, at);
+                numberRegex.lastIndex = 0;
+                var match = numberRegex.exec(prop);
                 if (match) {
                     this.members.push({ name: match[1], isIndex: true });
-                    this.onProp(match[1], true);
+                    if (this.onProp)
+                        this.onProp(match[1], true);
                     return true;
                 }
                 throw new Error("Invalid MemberAccess expression:" + text);
             },
             ".": function (text, at, line, offset) {
                 if (this.lastToken === "]") {
-                    return;
+                    return true;
                 }
-                return this.MeetProp(text, at);
+                return this.meetProp(text, at);
             },
             "[": function (text, at, line, offset) {
                 if (this.lastToken === "." || this.lastToken === undefined) {
-                    return this.meetProp(text, at);
+                    return this.meetProp(text, at, this.lastToken === undefined);
                 }
                 else {
                     if (this.lastToken === "[")
                         throw new Error("Invalid MemberAccess expression:" + text);
+                    var word = text.substring(this.lastTokenAt + 1, at);
+                    if (!/^\s*$/g.test(word)) {
+                        throw new Error("Invalid MemberAccess expression:" + text);
+                    }
+                    return true;
                 }
             },
             "]": function (text, at, line, offset) {
@@ -376,14 +388,14 @@ var Quic;
                 return this.meetProp(text, text.length, true);
             }
         };
-        var MemberAccessParser = function (text) {
+        Models.MemberAccessParser = function (text) {
             this.members = [];
             this.lastTokenAt = -1;
             expressionReader(text, this);
         };
-        MemberAccessParser.prototype = memberAccess;
+        Models.MemberAccessParser.prototype = memberAccess;
         var propRegex = /^\s*([a-zA-Z_\$][a-zA-Z0-9_\$]*)\s*$/g;
-        var numberRegex = /\s*\d*\s*/;
+        var numberRegex = /\s*(\d*)\s*/;
         var computedRegx = /\$\{[^\}]+\}/g;
         var arrSectionRegt = "(?:\\[(?:first|last|\\d+)\\])";
         var propSectionRegt = "(?:[a-zA-Z_\\$][a-zA-Z0-9_\\$]*)";
@@ -392,3 +404,5 @@ var Quic;
     })(Models = Quic.Models || (Quic.Models = {}));
 })(Quic || (Quic = {}));
 exports.Expression = Quic.Models.Expression;
+exports.ExpressionParser = Quic.Models.ExpressionParser;
+exports.MemberAccessParser = Quic.Models.MemberAccessParser;

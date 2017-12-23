@@ -1,10 +1,10 @@
 declare var exports;
 export class $$TestFailException extends Error{
-    constructor(message?:string,value1?:any,value2?:any){
-        super(message?message.replace(/\{0\}/g,value1).replace(/\{1\}/g,value2):"Test failed.");
+    constructor(message?:string,value1?:any,value2?:any,value3?:any){
+        super(message?message.replace(/\{0\}/g,value1)
+        .replace(/\{1\}/g,value2).replace(/\{2\}/g,value3):"Test failed.");
     }
 }
-
 
 export class $$TEST{
     static log(msg:string){
@@ -30,6 +30,21 @@ export class $$TEST{
     }
     value?:any;
     constructor(value:any){ this.value = value; }
+    prop(name,value?:any):$$TEST{
+        if(value===undefined){
+            return new $$TEST(this.value[name]);
+        }
+        if(this.value[name]!==value){
+            throw new $$TestFailException("expect:{0}.{1} is {2}",this.value,name,value);
+        }
+        return this;
+    }
+    length(len:number,message?:string){
+        if(this.value.length!==len){
+            throw new $$TestFailException(message||"expect:{0}.length is {1}",this.value,len);
+        }
+        return this;
+    }
 
     isNone(message?:string):$$TEST{
         
@@ -72,6 +87,7 @@ export class $$TEST{
         if(this.value===0){
             throw new $$TestFailException(message||"expect:{0} is NOT zero",this.value);
         }
+        
         return this;
     }
     

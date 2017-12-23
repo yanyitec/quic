@@ -1,4 +1,3 @@
-/// <reference path="quic.schema.d.ts" />
 declare namespace Quic {
     namespace Models {
         enum ExpressionTypes {
@@ -47,5 +46,7 @@ declare namespace Quic {
             isIndex?: boolean;
         }
         function expressionReader(text: string, parser: IParser): void;
+        let ExpressionParser: (text: string) => void;
+        let MemberAccessParser: (text: string) => void;
     }
 }
