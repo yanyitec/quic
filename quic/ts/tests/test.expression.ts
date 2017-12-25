@@ -28,7 +28,10 @@ namespace Quic{
             $$TEST.log("quic.expression[expr]->test");
             let expr = "abc.def${ok}${alias[0] +'\"' + No[0].def}";
             let exprs = new Quic.Models.ExpressionParser(expr).exprs;
-            
+            new $$TEST(exprs[0]).instanceOf((Quic.Models.Expression as any).ConstExpression);
+            new $$TEST(exprs[0].text).isEqual("abc.def");
+            new $$TEST(exprs[1]).instanceOf((Quic.Models.Expression as any).ComputedExpression);
+            new $$TEST(exprs[1].path).hasValue();
             $$TEST.log("quic.expression[member]->pass");
         }
 

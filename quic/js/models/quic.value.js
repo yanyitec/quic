@@ -1,4 +1,5 @@
 /// <reference path="quic.schema.ts" />
+/// <reference path="../base/quic.utils.ts" />
 /// <reference path="../base/quic.observable.ts" />
 var Quic;
 (function (Quic) {
@@ -9,38 +10,51 @@ var Quic;
                 if (!superior) {
                     var mockData_1 = {};
                     superior = {
+                        $super: undefined,
+                        $root: undefined,
+                        _$schema: undefined,
                         subscribe: function () { return this; },
                         unsubscibe: function () { return this; },
                         notify: function () { return this; },
                         get_value: function () { return mockData_1; },
                         set_value: function () { throw new Error("invalid operation"); },
-                        define: function () { throw new Error("invalid operation"); },
-                        updateSchema: function () { return this; },
+                        find: function () { throw new Error("invalid operation"); },
+                        parse: function () { throw new Error("invalid operation"); },
                         delete: function () { return this; }
                     };
+                    superior.$root = superior;
                 }
-                this._$superior = superior;
-                this._$schema = schema || new Models.Schema();
-                if (schema.isObject) {
-                    var me = this;
-                    for (var propname in schema.props) {
-                        me[propname] = new DataValue(schema.props[propname], this);
+                if (this.$super = superior) {
+                    this.$root = superior.$root;
+                }
+                if (schema !== null) {
+                    this._$schema = schema || new Models.Schema();
+                    if (schema.isObject) {
+                        var me = this;
+                        for (var propname in schema.props) {
+                            me[propname] = new DataValue(schema.props[propname], this);
+                        }
                     }
                 }
             }
             DataValue.prototype.get_data = function () {
-                var data = this._$superior.get_value();
-                if (this._$schema.isArray) {
-                    this.length = data.length;
+                if (this._$data === undefined) {
+                    var data = this.$super.get_value();
+                    return data;
                 }
-                return data;
+                else {
+                    return this._$data;
+                }
             };
             DataValue.prototype.get_value = function () {
                 var schema = this._$schema;
                 var result = this.get_data()[schema.name];
                 if (!result && schema.isObject) {
                     result = schema.isArray ? [] : {};
-                    this._$superior.set_value(result, false);
+                    this.$super.set_value(result, false);
+                }
+                if (schema.isArray) {
+                    this.length = result.length;
                 }
                 return result;
             };
@@ -64,22 +78,44 @@ var Quic;
                     //不需要事件，直接返回
                     if (srcEvtArgs === false)
                         return value;
+                    //触发自己的valuechange事件
+                    evtArgs = {
+                        value: value,
+                        old_value: oldValue,
+                        publisher: this,
+                        src: srcEvtArgs
+                    };
+                    this.notify(evtArgs);
+                    return this;
                 }
-                else {
-                    if (oldValue !== value) {
-                        //赋给新的值
-                        data[name] = value;
-                        //触发自己的valuechange事件
+                if (oldValue !== value) {
+                    //赋给新的值
+                    data[name] = value;
+                    //触发自己的valuechange事件
+                    if (srcEvtArgs !== false) {
+                        evtArgs = {
+                            value: value,
+                            old_value: oldValue,
+                            publisher: this,
+                            src: srcEvtArgs
+                        };
+                        this.notify(evtArgs);
                     }
                 }
-                if (schema.isObject) {
-                    var me = this;
-                    for (var prop in me) {
-                        var member = me[prop];
-                        if (member && member._$superior === this)
-                            member.set_value(value[prop], srcEvtArgs === false ? false : evtArgs);
+                if (schema.isArray) {
+                    this.length = value.length;
+                }
+                var me = this;
+                var boardcast = srcEvtArgs !== false && (!evtArgs || !evtArgs.cancel);
+                for (var prop in me) {
+                    var member = me[prop];
+                    if (member && member.$super === this) {
+                        member._$data = value;
+                        if (boardcast)
+                            member.set_value(value[prop], evtArgs);
                     }
                 }
+                return this;
             };
             DataValue.prototype.subscribe = function (listener) {
                 (this.__listeners || (this.__listeners = [])).push(listener);
@@ -97,23 +133,68 @@ var Quic;
             };
             DataValue.prototype.notify = function (evtArgs) {
                 if (this.__listeners) {
+                    var cancel = false;
                     for (var i = 0, j = this.__listeners.length; i < j; i++) {
-                        this.__listeners[i](evtArgs.value, this, evtArgs);
+                        if (this.__listeners[i](evtArgs.value, this, evtArgs) === false)
+                            cancel = true;
                     }
+                    evtArgs.cancel = cancel;
                 }
                 return this;
             };
-            DataValue.prototype.define = function (text) {
+            DataValue.prototype.find = function (text) {
                 var _this = this;
                 var dataValue = this;
-                this._$schema.define(text, function (propname, schema, rootSchema) {
+                this._$schema.find(text, function (propname, schema) {
                     var prop = dataValue[propname];
                     if (!prop) {
                         dataValue[propname] = new DataValue(schema.itemSchema || schema, _this);
                     }
                     dataValue = prop;
                 });
-                return this;
+                return dataValue;
+            };
+            DataValue.prototype.parse = function (text) {
+                var _this = this;
+                var deps = [];
+                var dataValue = this;
+                var me = this;
+                var def = this._$schema.parse(text, function (propname, schema, reset) {
+                    var prop = _this;
+                    if (reset) {
+                        deps.push(dataValue);
+                        dataValue = _this;
+                    }
+                    prop = dataValue[propname];
+                    if (!prop) {
+                        dataValue[propname] = new DataValue(schema.itemSchema || schema, _this);
+                    }
+                    dataValue = prop;
+                });
+                if (def.schema || (deps.length === 1 && deps[0] === dataValue)) {
+                    return dataValue;
+                }
+                else {
+                    var dvalue_1 = new DataValue(null, this);
+                    (this.__computes || (this.__computes = {}))[text] = dvalue_1;
+                    dvalue_1.get_value = function () {
+                        return def.expression.getValue(_this.get_data());
+                    };
+                    dvalue_1.set_value = function () { return _this; };
+                    for (var i in deps) {
+                        var dep = deps[i];
+                        dep.subscribe(function (value, publisher, evt) {
+                            var myEvt = {
+                                old_value: dvalue_1.__oldvalue,
+                                value: dvalue_1.__oldvalue = dvalue_1.get_value(),
+                                src: evt,
+                                publisher: dvalue_1
+                            };
+                            dvalue_1.notify(myEvt);
+                        });
+                    }
+                    return dvalue_1;
+                }
             };
             DataValue.prototype.delete = function (name) {
                 if (!this._$schema.isObject)
@@ -139,22 +220,6 @@ var Quic;
                 }
                 return existed;
             };
-            DataValue.prototype.updateSchema = function () {
-                var schema = this._$schema;
-                if (schema.isObject) {
-                    var me = this;
-                    for (var propname in schema.props) {
-                        var prop = me[propname];
-                        if (prop) {
-                            prop.updateSchema();
-                        }
-                        else {
-                            me[propname] = new DataValue(schema.props[propname], this);
-                        }
-                    }
-                }
-                return this;
-            };
             DataValue.prototype.toString = function () {
                 var result = this.get_value();
                 if (result === undefined || result === null)
@@ -165,6 +230,12 @@ var Quic;
         }());
         Models.DataValue = DataValue;
         ;
+        var idSeed = 0;
+        function idNo() {
+            if (++idSeed === 2100000000)
+                idSeed = 0;
+            return idSeed;
+        }
     })(Models = Quic.Models || (Quic.Models = {}));
 })(Quic || (Quic = {}));
 exports.DataValue = Quic.Models.DataValue;

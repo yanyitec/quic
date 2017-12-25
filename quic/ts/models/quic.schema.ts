@@ -1,9 +1,19 @@
+/// <reference path="../base/quic.utils.ts" />
+/// <reference path="../base/quic.observable.ts" />
+/// <reference path="quic.expression.ts" />
+/// <reference path="../quic.package.ts" />
+
 namespace Quic{
     export namespace Models{
         // prop.myname[10][22].prop
         //root.prop(prop).prop(myname).index(10).index(22).prop(prop);
         export interface IOnProperty{
-            (name:string,schema:ISchema,rootSchema:ISchema);
+            (name:string,schema:ISchema,reset?:boolean);
+        }
+        export interface DefineOpts{
+            expression:Expression;
+            text:string;
+            schema :ISchema;
         }
         export interface ISchema{
             props:{[name:string]:ISchema};
@@ -11,7 +21,8 @@ namespace Quic{
             itemSchema:ISchema;
             prop(name:string):ISchema;
             index(nameOrIndex:string|number):ISchema;
-            define(expr:string,onProperty?:IOnProperty):ISchema;
+            find(expr:string,onProperty?:IOnProperty):ISchema;
+            parse(expr:string,onProperty?:IOnProperty):DefineOpts;
             name:string|number;
             composite:ISchema;
             isArray:boolean;
@@ -30,6 +41,7 @@ namespace Quic{
             isArray:boolean;
             isObject :boolean;
             root:Schema;
+            __defines:{[index:string]:DefineOpts};
             constructor(name:string="$ROOT",composite?:ISchema){
                 this.name = name;
                 this.composite = composite;
@@ -49,65 +61,107 @@ namespace Quic{
                 return result;
             }
             index(name:string):ISchema{
-                let result = (this.props|| (this.props={}))[name];
+                let result:ISchema;
+                if(name===""){
+                    result = this.itemSchema;
+                }else {
+                    result = (this.props|| (this.props={}))[name];
+                }
+                
                 if(!result){
                     result = this.itemSchema || (this.itemSchema = new Schema("[quic:index]",this));
-                    this.props[name]=result;
+                    if(name)this.props[name]=result;
                     this.isObject=this.isArray=true;
                 }
                 return result;
             }
-            define(expr:string,onProperty?:IOnProperty):ISchema{
-                let at = 0;
-                let lastDotAt:number=-1;
-                let branceStartAt:number;
-                let lastBranceEndAt:number;
-                let schema:ISchema = this;
-                for(let i=0,j=expr.length;i<j;i++){
-                    let token = expr[i];
-                    if(token==="."){
-                        lastDotAt=i;
-                        if(lastBranceEndAt===i-1){
-                            continue;
+            find(text:string,onProperty?:IOnProperty):ISchema{
+                let exprs = this.__defines ||(this.__defines={});
+                let def :DefineOpts = exprs[text];
+                let schema :ISchema = this;
+                if(!def){
+                    let expr = new MemberAccessExpression(text,(name,isArray)=>{
+                        if(name==="$ROOT"){
+                            schema = schema.root;
+                        }else if(name==="$SUPER"){
+                            if(schema.composite) schema = schema.composite;
+                            else throw new Error("invalid expression,no more $SUPER:"+text);
+                        }else {
+                            if(isArray){
+                                schema.index(name);
+                            }else {
+                                schema.prop(name);
+                            }
                         }
-                        let prop = expr.substring(lastDotAt+1,i-1);
-                        if(prop==="$root"){
-                            schema = this.root;
-                        }else if(prop==="$parent"){
-                            schema = schema.composite?schema.composite:schema;
-                        }else if(prop){
-                            schema = schema.prop(prop);
-                            if(onProperty) onProperty(prop,schema,this);
+                        if(onProperty) onProperty(name,schema);
+                    });
+                    def = {
+                        text:text,
+                        schema:schema,
+                        expression:expr
+                    };
+                }else { 
+                    for(let i in (def.expression as MemberAccessExpression).members){
+                        let member = (def.expression as MemberAccessExpression).members[i];
+                        if(member.name==="$ROOT"){
+                            schema = schema.root;
+                        }else if(member.name==="$SUPER"){
+                            if(schema.composite) schema = schema.composite;
+                            else throw new Error("invalid expression,no more $SUPER:"+text);
+                        }else {
+                            if(member.isIndex){
+                                schema = schema.index(member.name);
+                            }else {
+                                schema = schema.prop(member.name);
+                            }
                         }
-                        
-                    }else if(token==="["){
-                        if(branceStartAt!==undefined){throw new Error("invalid schema path");} 
-                        let prop = expr.substring(lastDotAt+1,i-1);
-                        if(prop==="$root"){
-                            schema = this.root;
-                        }else if(prop==="$parent"){
-                            schema = schema.composite?schema.composite:schema;
-                        }else if(prop){
-                            schema = schema.prop(prop);
-                            if(onProperty) onProperty(prop,schema,this);
-                        }
-                        branceStartAt=i;
-                    }else if(token==="]"){
-                        if(branceStartAt!==undefined){throw new Error("invalid schema path");} 
-                        let index = parseInt(expr.substring(branceStartAt+1,i-1));
-                        if(index!=index) {throw new Error("invalid schema path");} 
-                        branceStartAt=undefined;lastBranceEndAt=i;
-                        schema = schema.index(index);
-                        if(onProperty) onProperty(index.toString(),schema,this);
+                        if(onProperty) onProperty(member.name,schema);
                     }
                 }
-                if(branceStartAt!==undefined){throw new Error("invalid schema path");} 
-                let prop = expr.substring(lastDotAt+1);
-                if(prop){
-                    schema = schema.prop(prop);
-                    if(onProperty) onProperty(prop,schema,this);
-                };
                 return schema;
+            }
+            parse(text:string,onProperty?:IOnProperty):DefineOpts{
+                let exprs = this.__defines ||(this.__defines={});
+                let def :DefineOpts = exprs[text];
+                if(def) return def;
+                let schema :ISchema = this;
+                let oldText :string;
+                let reset = false;
+                let onProp =(name:string,isArr:boolean,text:string)=>{
+                    if(text!=oldText){
+                        schema = this;
+                        oldText = text;
+                        reset=true;
+                    }
+                    if(name==="$ROOT"){
+                        schema = schema.root;
+                    }else if(name==="$SUPER"){
+                        if(schema.composite) schema = schema.composite;
+                        else throw new Error("invalid expression,no more $SUPER:"+text);
+                    }else {
+                        if(isArr){
+                            schema = schema.index(name);
+                        }else {
+                            schema = schema.prop(name);
+                        }
+                    }
+                    if(onProperty) onProperty(name,schema,reset);
+                    reset = false;
+                };
+                if(!def){
+                    let expr = Expression.parse(text,onProp);
+                    if(!(expr as ComputedExpression).path) {
+                        schema = undefined;
+                    }
+                    def = this.__defines[text] = {
+                        text:text,
+                        schema:schema,
+                        expression:expr
+                    };
+                }else {
+                    def.expression.gothrough(onProp);
+                }
+                return def;
             }
         }
         

@@ -6,34 +6,40 @@ declare namespace Quic {
             datapath = 2,
             mixed = 3,
         }
-        interface IAccess {
-            (data: any, value?: any): any;
-            type?: ExpressionTypes;
-            expr?: Expression;
-            schema?: ISchema;
-            text?: string;
-            root?: ISchema;
-            isDataPath?: boolean;
-            deps?: Array<ISchema>;
+        interface AccessOpts {
+            get_super: (data: any) => any;
+            get_root: (data: any) => any;
         }
         class Expression {
             type: ExpressionTypes;
             text: string;
-            genAccess: (rootSchema: ISchema) => IAccess;
             protected constructor(type: ExpressionTypes, text: string);
-            static parse(text: string): Expression;
+            gothrough(onProp: (name: string, isArr: boolean, text: string) => void): void;
+            getValue(data: any, accessOpts?: AccessOpts): any;
+            getCode(asValue?: boolean): string;
+            static parse(text: string, onProp?: (name: string, isArr: boolean, text: string) => void): Expression;
         }
         class MemberAccessExpression extends Expression {
+            member: IMember;
             members: Array<IMember>;
-            constructor(text: string);
+            constructor(text: string, onProp?: (name: string, isArr: boolean, expr: Expression) => void);
+            gothrough(onProp: (name: string, isArr: boolean, text: string) => void): void;
+            getValue(data: any, accessOpts?: AccessOpts): any;
+            getCode(asValue?: boolean): string;
         }
         class ComputedExpression extends Expression {
             paths: Array<MemberAccessExpression>;
             path: MemberAccessExpression;
-            constructor(text: string);
+            constructor(text: string, onProp?: (name: string, isArr: boolean, expr: Expression) => void);
+            gothrough(onProp: (name: string, isArr: boolean, text: string) => void): void;
+            getValue(data: any): any;
+            getCode(asValue?: boolean): string;
         }
         class MixedExpression extends Expression {
-            constructor(text: string, exprs: Array<Expression>);
+            constructor(text: string, onProp: (name: string, isArr: boolean, text: string) => void);
+            gothrough(onProp: (name: string, isArr: boolean, text: string) => void): void;
+            getValue(data: any): any;
+            getCode(asValue?: boolean): any;
             expr: Expression;
             exprs: Array<Expression>;
         }
@@ -47,7 +53,7 @@ declare namespace Quic {
             isIndex?: boolean;
         }
         function expressionReader(text: string, parser: IParser): void;
-        let ExpressionParser: (text: string) => void;
-        let MemberAccessParser: (text: string) => void;
+        let ExpressionParser: (text: string, onProp?: (name: string, isArr: boolean, text: string) => void) => void;
+        let MemberAccessParser: (text: string, onProp?: any) => void;
     }
 }

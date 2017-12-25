@@ -9,52 +9,121 @@ namespace Quic{
             datapath,
             mixed
         }
-        export interface IAccess{
-            (data:any,value?:any):any;
-            type?:ExpressionTypes;
-            expr?:Expression;
-            schema?:ISchema;
-            text?:string;
-            root?:ISchema;
-            isDataPath?:boolean;
-            deps?:Array<ISchema>;
+        export interface AccessOpts{
+            get_super:(data:any)=>any;
+            get_root:(data:any)=>any;
         }
+        
         export class Expression{
             type:ExpressionTypes;
             text:string;
-            genAccess:(rootSchema:ISchema)=>IAccess;
 
             protected constructor(type:ExpressionTypes,text:string){
                 this.type = type;
                 this.text = text;
             }
-            static parse(text:string):Expression{
-                let exprs = new ExpressionParser(text).exprs;
-                if(exprs.length==1){
-                    let expr = exprs[0];
-                    return (expr as ComputedExpression).path?(expr as ComputedExpression).path:expr;
+            gothrough(onProp:(name:string,isArr:boolean,text:string)=>void){
+                throw new Error("Invalid Operation");
+            }
+            getValue(data:any,accessOpts?:AccessOpts):any{
+                throw new Error("Invalid Operation");
+            }
+            getCode(asValue?:boolean):string{
+                throw new Error("Invalid Operation");
+            }
+            static parse(text:string,onProp?:(name:string,isArr:boolean,text:string)=>void):Expression{
+                let expr = new MixedExpression(text,onProp);
+                if(expr.expr){
+                    if((expr.expr as ComputedExpression).path){
+                        return (expr.expr as ComputedExpression).path;
+                    }else {
+                        return expr.expr;
+                    }
                 }
-                return new MixedExpression(text,exprs);
+                return expr;
             }
         }
         class ConstExpression extends Expression{
             constructor(constText:string){
                 super(ExpressionTypes.const,constText);
             }
+            getValue(data:any):any{
+                return this.text;
+            }
+            getCode(asValue?:boolean):string{
+                return '"' + this.text.replace(/\\/g,"\\\\").replace(/"/g,"\\\"").replace(/\n/g,"\\\n") + '"';
+            }
             text:string;
         }
+        (Expression as any).ConstExpression = ConstExpression;
+
         export class MemberAccessExpression extends Expression{
+            member:IMember;
             members:Array<IMember>;
-            constructor(text:string){
+            constructor(text:string,onProp?:(name:string,isArr:boolean,expr:Expression)=>void){
                 super(ExpressionTypes.datapath,text);
-                this.members = new MemberAccessParser(text).members;
+                this.members = new MemberAccessParser(text,onProp).members;
+                if(this.members.length==0) this.member = this.members[0];
+                
             }
+            gothrough(onProp:(name:string,isArr:boolean,text:string)=>void){
+                if(this.member){
+                    onProp(this.member.name,this.member.isIndex,this.text);
+                }else {
+                    for(let i in this.members){
+                        let member  = this.members[i];
+                        onProp(member.name,member.isIndex,this.text);
+                    }
+                }
+            }
+            getValue(data:any,accessOpts?:AccessOpts):any{
+                let code:string;
+                if(this.member){
+                    code = "return " + this.getCode()+";";
+                    this.getValue = new Function("$__DATA__",code) as any;
+                }else {
+                    code = this.getCode();
+                    this.getValue = new Function("$__DATA__",code) as any;                    
+                }
+                return this.getValue(data,accessOpts);
+            }
+            getCode(asValue?:boolean):string{
+                let code = "";
+                if(this.member){
+                    code = "$__DATA__[";
+                    if(this.member.isIndex) code += this.member.name;
+                    else code += '"' + this.member.name +'"';
+                    code = "]";
+                    if(!asValue) code += "return " + code + ";\n";
+                }else {
+                    for(let i in this.members){
+                        let member:IMember = this.members[i];
+                        if(member.isIndex){
+                            if(!member.name) throw new Error("this expression cannot call getValue:" + this.text);
+                            code += "$__DATA__ = $__DATA__[" + member.name + "]";
+                            code += "if(!$__DATA__)return $__DATA__;\n";
+                        }else {
+                            if(!member.name) throw new Error("this expression cannot call getValue:" + this.text);
+                            code += "$__DATA__ = $__DATA__[\"" + member.name + "\"]";
+                            code += "if(!$__DATA__)return $__DATA__;\n";
+                        }
+                    }
+                    code += "return $__DATA__;\n";
+                    if(asValue){
+                        code = "(function($__DATA__)){" + code + "})($__DATA__)";
+                    }
+                }
+                return code;
+            }
+            
         }
-        let jsKeywords = ["if","var","switch","case","for","return","with"];
+        (Expression as any).MemberAccessExpression = MemberAccessExpression;
+        let jsKeywords = ["if","while","var","switch","case","for","in","return","with","function","continue","break"];
+        
         export class ComputedExpression extends Expression{
             paths:Array<MemberAccessExpression>;
             path:MemberAccessExpression;
-            constructor(text:string){
+            constructor(text:string,onProp ? :(name:string,isArr:boolean,expr:Expression)=>void){
                 super(ExpressionTypes.computed,text);
                 let match:RegExpMatchArray;let path:string;
                 pathRegx.lastIndex=0;
@@ -66,65 +135,101 @@ namespace Quic{
                         if(jsKeywords[i] ===path){isKeyword=true;break;} 
                     }
                     if(isKeyword){continue;}
-                    this.paths.push(new MemberAccessExpression(path)); 
+                    this.paths.push(new MemberAccessExpression(path,onProp)); 
                 }
-                if(path && path.length===text.length-3){
+                if(path && path.length===text.length){
                     this.path = this.paths[0];
                 }                
-                let code = "try{\n\twith($__DATA__){\n\t\treturn "+text+"\t}\n}"
-                +"catch($__EXCEPTION__){\n\treturn $__EXCEPTION__;\n}\n";
+                
                 
             }
-            
+            gothrough(onProp:(name:string,isArr:boolean,text:string)=>void){
+                if(this.path){
+                    this.path.gothrough(onProp);
+                }else {
+                    for(let i in this.paths){
+                        let expr = this.paths[i];
+                        expr.gothrough(onProp);
+                    }
+                }
+            }
+
+            getValue(data:any):any{
+                if(this.path){
+                    let result = this.path.getValue(data);
+                    this.getValue = this.path.getValue;
+                    return result;
+                }else {
+                    let code = this.getCode();
+                    this.getValue = new Function("$__DATA__" ,code) as any;
+                    return this.getValue(data);
+                }
+            }
+            getCode(asValue?:boolean):string{
+                if(this.path) return this.path.getCode(asValue);
+                let code = "with($__DATA__){ return \n" +this.text + ";\n}";
+                if(asValue){
+                    code = "(function($__DATA__){"+code+"})($__DATA)";
+                }
+                return code;
+            }
+
         }
+        (Expression as any).ComputedExpression = ComputedExpression;
+
         export class MixedExpression extends Expression{
-            constructor(text:string,exprs:Array<Expression>){
+            constructor(text:string,onProp:(name:string,isArr:boolean,text:string)=>void){
                 super(ExpressionTypes.mixed,text);
+                let exprs = new ExpressionParser(text,onProp).exprs;
                 this.exprs = exprs;
                 if(exprs.length===1) {
                     this.expr = exprs[0];
                 }
-                
+            }
+            gothrough(onProp:(name:string,isArr:boolean,text:string)=>void){
+                if(this.expr){
+                    this.expr.gothrough(onProp);
+                }else {
+                    for(let i in this.exprs){
+                        let ex:Expression = this.exprs[i] as Expression;
+                        if(!(ex instanceof ConstExpression)){
+                            (ex as Expression).gothrough(onProp);
+                        }
+                    }
+                }
+            }
+            getValue(data:any):any{
+                if(this.expr){
+                    let value = this.expr.getValue(data);
+                    this.getValue = this.expr.getValue;
+                    return value;
+                }else {
+                    let code = this.getCode();
+                    this.getValue = new Function("$__DATA__",code) as any;
+                    return this.getValue(data);
+                }
+            }
+            getCode(asValue?:boolean):any{
+                if(this.expr){
+                    return this.expr.getCode(asValue);
+                }else {
+                    let code = "var $__RESULT__=\"\";\n";
+                    for(let i in this.exprs){
+                        code += "$__RESULT__ +=" + this.exprs[i].getValue(true)+";\n";
+                    }
+                    code += "return $__DATA__;";
+                    if(asValue){
+                        code ="(function($__DATA__){"+code+"})($__DATA__)"
+                    }
+                    return code;
+                }
             }
             expr:Expression;
             exprs:Array<Expression>;
 
         }
-        function makeMixedAccess(expr:MixedExpression,root:ISchema){
-            let accesses:Array<IAccess>=[];
-            let deps :Array<ISchema>=[];
-            for(let i in expr.exprs){
-                let access = expr.exprs[i].genAccess(root);
-                accesses.push(access);
-                let subdeps = access.deps;
-                if(subdeps){
-                    for(let m in subdeps){
-                        let subdep = subdeps[m];
-                        for(let v in deps) {if(deps[v]===subdep){subdep=null;}}
-                        if(subdep){
-                            deps.push(subdep);
-                        } 
-
-                    }
-                }
-            }
-            let access:IAccess = (data:any,value?:any,evt?:any)=>{
-                if(value===undefined) {
-                    let rs = [];
-                    for(let i in accesses){
-                        let part = accesses[i].call(this,data);
-                        if(part!==undefined && part!==null)rs.push(part);
-                    }
-                    return rs.join("");
-                }
-                for(let i in accesses){
-                    accesses[i].call(this,data,value,evt);
-                }
-                return this;
-            };
-            access.deps = deps;
-            return access;
-        }
+        (Expression as any).MixedExpression = MixedExpression;        
+        
         class InvalidExpression extends Error{
             message :string;
             expression:string;
@@ -201,7 +306,7 @@ namespace Quic{
                 if(this.inString ) {return;}
                 if(this.inComputed){
                     if(--this.braceCount==0){
-                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt+1,at)));
+                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt+1,at),this.onProp));
                         this.inComputed=false;
                         return true;
                     }
@@ -241,10 +346,11 @@ namespace Quic{
                 return true;
             }
         }
-        export let ExpressionParser = function(text:string){
+        export let ExpressionParser = function(text:string,onProp?:(name:string,isArr:boolean,text:string)=>void){
             this.exprs =[];
             this.braceCount=0;
             this.lastTokenAt=-1;
+            this.onProp = onProp;
             expressionReader(text,this);
         }
         ExpressionParser.prototype = expressionParser;
@@ -263,7 +369,7 @@ namespace Quic{
                 let match = propRegex.exec(prop);
                 if(match){
                     this.members.push({name:match[1],isIndex:false});
-                    if(this.onProp)this.onProp(match[1],false);
+                    if(this.onProp)this.onProp(match[1],false,text);
                     return true;
                 } 
                 
@@ -275,7 +381,7 @@ namespace Quic{
                 let match = numberRegex.exec(prop);
                 if(match){
                     this.members.push({name:match[1],isIndex:true});
-                    if(this.onProp)this.onProp(match[1],true);
+                    if(this.onProp)this.onProp(match[1],true,text);
                     return true;
                 } 
                 throw new Error("Invalid MemberAccess expression:" + text);
@@ -309,9 +415,10 @@ namespace Quic{
                 return this.meetProp(text,text.length,true);
             }
         }
-        export let MemberAccessParser = function(text:string){
+        export let MemberAccessParser = function(text:string,onProp?:any){
             this.members =[];
             this.lastTokenAt=-1;
+            this.onProp = onProp;
             expressionReader(text,this);
         }
         MemberAccessParser.prototype = memberAccess;

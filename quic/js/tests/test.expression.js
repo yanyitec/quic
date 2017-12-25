@@ -26,6 +26,10 @@ var Quic;
             $$TEST.log("quic.expression[expr]->test");
             var expr = "abc.def${ok}${alias[0] +'\"' + No[0].def}";
             var exprs = new Quic.Models.ExpressionParser(expr).exprs;
+            new $$TEST(exprs[0]).instanceOf(Quic.Models.Expression.ConstExpression);
+            new $$TEST(exprs[0].text).isEqual("abc.def");
+            new $$TEST(exprs[1]).instanceOf(Quic.Models.Expression.ComputedExpression);
+            new $$TEST(exprs[1].path).hasValue();
             $$TEST.log("quic.expression[member]->pass");
         }
         if (require) {

@@ -9,9 +9,13 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 /// <reference path="../base/quic.utils.ts" />
+/// <reference path="../base/quic.context.ts" />
 /// <reference path="../base/quic.observable.ts" />
+/// <reference path="../base/quic.promise.ts" />
+/// <reference path="../base/quic.transport.ts" />
 /// <reference path="quic.schema.ts" />
 /// <reference path="quic.expression.ts" />
+/// <reference path="quic.value.ts" />
 /// <reference path="../quic.package.ts" />
 var Quic;
 (function (Quic) {
@@ -21,127 +25,101 @@ var Quic;
             __extends(Model, _super);
             //transport:TransportOpts;
             function Model(opts) {
-                var _this = _super.call(this, null, null) || this;
-                _this._$opts = opts;
-                _this.__accesses = {};
-                var data = {};
-                if (opts.imports) {
-                    if (!opts.model) {
-                        throw new Error("imports require model");
-                    }
-                    for (var n in opts.imports) {
-                        //imports(this,opts.model,data,n,opts.imports[n]);
-                    }
-                }
+                var _this = _super.call(this, opts.schema, null) || this;
+                _this.$model_state = new ModelState(opts, _this);
                 return _this;
             }
-            Model.prototype.get_access = function (text, mixed) {
-                var access = this.__accesses[text];
-                if (!access) {
-                    var innerAccess = void 0;
-                    if (mixed === true) {
-                        innerAccess = Models.Expression.parse(text).genAccess(this._$schema);
-                    }
-                    else {
-                        innerAccess = new Models.MemberAccessExpression(text).genAccess(this._$schema);
-                    }
-                    var dataValue_1 = innerAccess(this);
-                    access = function (value, evt) {
-                        if (value === undefined) {
-                            return dataValue_1.get_value();
-                        }
-                        if (value === "quic:undefined") {
-                            value === undefined;
-                        }
-                        dataValue_1.set_value(value, evt);
-                    };
-                    this.__accesses[text] = access;
-                    access.model = this;
-                    var deps = innerAccess.deps;
-                    for (var i in deps) {
-                    }
-                }
-                return access;
-            };
+            Model.prototype.fetch = function () { return this.$model_state.fetch(); };
             return Model;
         }(Models.DataValue));
         Models.Model = Model;
-        function noticeDiff(rootData, data, compare, schema) {
-            var newCompare;
-            var enumerator;
-            if (schema.isArray) {
-                newCompare = [];
-                enumerator = schema.indexs;
-            }
-            else if (schema.isObject) {
-                newCompare = {};
-                enumerator = schema.props;
-            }
-            else {
-                if (compare !== data) {
-                    //schema.notify(data,rootData,schema);
-                    return Quic.deepClone(data);
+        var ModelState = /** @class */ (function () {
+            function ModelState(opts, model) {
+                var _this = this;
+                this.opts = opts;
+                this.model = model;
+                if (opts.imports) {
+                    if (!opts.src_model)
+                        throw new Quic.Exception("model required", opts);
+                    this.src_model = opts.src_model;
+                    this.imports = null;
                 }
-                return compare;
-            }
-            for (var name_1 in enumerator) {
-                var subData = data[name_1];
-                var subCompare = compare[name_1];
-                var subSchema = schema.props[name_1];
-                if (subData !== subCompare) {
-                    //schema.notify(subData,rootData,subSchema);
-                    newCompare[name_1] = Quic.deepClone(subData);
-                }
-                else if (subSchema.isObject) {
-                    newCompare[name_1] = noticeDiff(rootData, subData, subCompare, subSchema);
+                if (opts.data) {
+                    this.raw = opts.data;
+                    this.fetch = function () {
+                        if (_this.__fetchPromise)
+                            return _this.__fetchPromise;
+                        return _this.__fetchPromise = new Quic.Promise(function (resolve, reject) {
+                            _this._onDataArrived(_this.raw, resolve, reject);
+                        });
+                    };
                 }
             }
-            return newCompare;
-        }
-        function imports(destModel, srcModel, destData, key, value) {
-            if (key) {
-                //let destAccess :IModelAccess = destModel.access(key);
-                if (typeof value === "string" && value.length > 3) {
-                    if (value[0] === "$" && value[1] === "{" && value[value.length - 1] === "}") {
-                        //let srcAccess:IModelAccess = srcModel.access(value,true);
-                        //destAccess(destData,srcAccess(srcModel.data));
-                        return;
+            ModelState.prototype.fetch = function () {
+                var _this = this;
+                if (this.__fetchPromise === null) {
+                    return this.__fetchPromise = new Quic.Promise(function (resolve, reject) {
+                        var transOpts = Quic.deepClone(_this.transport);
+                        transOpts.url = _this.model.parse(_this.transport.url).get_value();
+                        //this.notify("onfetching",transOpts);
+                        Quic.transport(transOpts).then(function (result) {
+                            _this._onDataArrived(result, resolve, reject);
+                        }, function (err, at) {
+                            Quic.ctx.error("ajax request is failed", transOpts, err, at);
+                            reject(err, at);
+                        });
+                    });
+                }
+                else {
+                    return this.__fetchPromise;
+                }
+            };
+            ModelState.prototype._onDataArrived = function (raw, resolve, reject) {
+                this.raw = raw;
+                var result = raw.length !== undefined && raw.push && raw.shift ? [] : {};
+                for (var i in raw)
+                    result[i] = raw[i];
+                this.model.set_value(result);
+                if (this.imports === null) {
+                    this.imports = [];
+                    for (var n in this.opts.imports) {
+                        this.imports.push(imports(this.model, this.src_model, n, this.opts.imports[n]));
                     }
                 }
-                //destAccess(destData,deepClone(value));
-            }
-            else {
-                var t = typeof value;
-                if (t === "object") {
-                    for (var n in value) {
-                        for (var n_1 in value) {
-                            destData[n_1] = Quic.deepClone(value[n_1]);
-                        }
-                    }
-                    return;
+                else if (this.imports) {
+                    for (var n in this.imports)
+                        this.imports[n]();
                 }
-                if (t === "string" && value.length > 3) {
-                    if (value[0] === "$" && value[1] === "{" && value[value.length - 1] === "}") {
-                        //let srcAccess:IModelAccess = srcModel.access(value,true);
-                        //let srcValue = srcAccess(srcModel.data);
-                        //if(typeof srcValue==="object"){
-                        //    for(let n in srcValue){
-                        //        destData[n] = deepClone(srcValue[n]);
-                        //    }
-                        //}else {
-                        //    destData[""] = srcValue;
-                        //}
-                        return;
-                    }
+                this.__fetchPromise = undefined;
+                resolve(result);
+            };
+            return ModelState;
+        }());
+        Models.ModelState = ModelState;
+        function imports(destModel, srcModel, key, value) {
+            var destValue = destModel.define(key);
+            if (typeof value === "string" && value.length > 3 && value[0] === "$" && value[value.length - 1] === "}") {
+                var expr_1;
+                var dbBind = false;
+                if (value[1] === "{") {
+                    expr_1 = srcModel.parse(value);
+                    destValue.set_value(expr_1.get_value());
                 }
-                destData[""] = value;
+                else if (value[1] === "$" && value[2] === "{") {
+                    expr_1 = srcModel.parse(value.substr(1));
+                    destValue.set_value(expr_1.get_value());
+                    expr_1.subscribe(function (value, publisher, evt) {
+                        destValue.set_value(value);
+                    });
+                }
+                return function () {
+                    destValue.set_value(expr_1.get_value(), false);
+                };
             }
-        }
-        var idSeed = 0;
-        function idNo() {
-            if (++idSeed === 2100000000)
-                idSeed = 0;
-            return idSeed;
+            destValue.set_value(Quic.deepClone(value));
+            return function () {
+                destValue.set_value(Quic.deepClone(value), false);
+            };
         }
     })(Models = Quic.Models || (Quic.Models = {}));
 })(Quic || (Quic = {}));

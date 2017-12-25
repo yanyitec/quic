@@ -3,6 +3,13 @@ namespace Quic{
     export let opts={
         "validation-message-prefix":"valid-"
     };
+    export class Exception extends Error{
+        constructor(message:string,...args:Array<any>){
+            super(message);
+            for(let i in args) this[i] = args[i];
+        }
+
+    }
     export function nextGNo():number{
         if(id_seed++>2100000000) id_seed= -2100000000;
         return id_seed;

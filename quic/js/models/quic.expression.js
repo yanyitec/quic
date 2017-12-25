@@ -24,13 +24,26 @@ var Quic;
                 this.type = type;
                 this.text = text;
             }
-            Expression.parse = function (text) {
-                var exprs = new Models.ExpressionParser(text).exprs;
-                if (exprs.length == 1) {
-                    var expr = exprs[0];
-                    return expr.path ? expr.path : expr;
+            Expression.prototype.gothrough = function (onProp) {
+                throw new Error("Invalid Operation");
+            };
+            Expression.prototype.getValue = function (data, accessOpts) {
+                throw new Error("Invalid Operation");
+            };
+            Expression.prototype.getCode = function (asValue) {
+                throw new Error("Invalid Operation");
+            };
+            Expression.parse = function (text, onProp) {
+                var expr = new MixedExpression(text, onProp);
+                if (expr.expr) {
+                    if (expr.expr.path) {
+                        return expr.expr.path;
+                    }
+                    else {
+                        return expr.expr;
+                    }
                 }
-                return new MixedExpression(text, exprs);
+                return expr;
             };
             return Expression;
         }());
@@ -40,22 +53,90 @@ var Quic;
             function ConstExpression(constText) {
                 return _super.call(this, ExpressionTypes.const, constText) || this;
             }
+            ConstExpression.prototype.getValue = function (data) {
+                return this.text;
+            };
+            ConstExpression.prototype.getCode = function (asValue) {
+                return '"' + this.text.replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\n/g, "\\\n") + '"';
+            };
             return ConstExpression;
         }(Expression));
+        Expression.ConstExpression = ConstExpression;
         var MemberAccessExpression = /** @class */ (function (_super) {
             __extends(MemberAccessExpression, _super);
-            function MemberAccessExpression(text) {
+            function MemberAccessExpression(text, onProp) {
                 var _this = _super.call(this, ExpressionTypes.datapath, text) || this;
-                _this.members = new Models.MemberAccessParser(text).members;
+                _this.members = new Models.MemberAccessParser(text, onProp).members;
+                if (_this.members.length == 0)
+                    _this.member = _this.members[0];
                 return _this;
             }
+            MemberAccessExpression.prototype.gothrough = function (onProp) {
+                if (this.member) {
+                    onProp(this.member.name, this.member.isIndex, this.text);
+                }
+                else {
+                    for (var i in this.members) {
+                        var member = this.members[i];
+                        onProp(member.name, member.isIndex, this.text);
+                    }
+                }
+            };
+            MemberAccessExpression.prototype.getValue = function (data, accessOpts) {
+                var code;
+                if (this.member) {
+                    code = "return " + this.getCode() + ";";
+                    this.getValue = new Function("$__DATA__", code);
+                }
+                else {
+                    code = this.getCode();
+                    this.getValue = new Function("$__DATA__", code);
+                }
+                return this.getValue(data, accessOpts);
+            };
+            MemberAccessExpression.prototype.getCode = function (asValue) {
+                var code = "";
+                if (this.member) {
+                    code = "$__DATA__[";
+                    if (this.member.isIndex)
+                        code += this.member.name;
+                    else
+                        code += '"' + this.member.name + '"';
+                    code = "]";
+                    if (!asValue)
+                        code += "return " + code + ";\n";
+                }
+                else {
+                    for (var i in this.members) {
+                        var member = this.members[i];
+                        if (member.isIndex) {
+                            if (!member.name)
+                                throw new Error("this expression cannot call getValue:" + this.text);
+                            code += "$__DATA__ = $__DATA__[" + member.name + "]";
+                            code += "if(!$__DATA__)return $__DATA__;\n";
+                        }
+                        else {
+                            if (!member.name)
+                                throw new Error("this expression cannot call getValue:" + this.text);
+                            code += "$__DATA__ = $__DATA__[\"" + member.name + "\"]";
+                            code += "if(!$__DATA__)return $__DATA__;\n";
+                        }
+                    }
+                    code += "return $__DATA__;\n";
+                    if (asValue) {
+                        code = "(function($__DATA__)){" + code + "})($__DATA__)";
+                    }
+                }
+                return code;
+            };
             return MemberAccessExpression;
         }(Expression));
         Models.MemberAccessExpression = MemberAccessExpression;
-        var jsKeywords = ["if", "var", "switch", "case", "for", "return", "with"];
+        Expression.MemberAccessExpression = MemberAccessExpression;
+        var jsKeywords = ["if", "while", "var", "switch", "case", "for", "in", "return", "with", "function", "continue", "break"];
         var ComputedExpression = /** @class */ (function (_super) {
             __extends(ComputedExpression, _super);
-            function ComputedExpression(text) {
+            function ComputedExpression(text, onProp) {
                 var _this = _super.call(this, ExpressionTypes.computed, text) || this;
                 var match;
                 var path;
@@ -75,71 +156,105 @@ var Quic;
                     if (isKeyword) {
                         continue;
                     }
-                    _this.paths.push(new MemberAccessExpression(path));
+                    _this.paths.push(new MemberAccessExpression(path, onProp));
                 }
-                if (path && path.length === text.length - 3) {
+                if (path && path.length === text.length) {
                     _this.path = _this.paths[0];
                 }
-                var code = "try{\n\twith($__DATA__){\n\t\treturn " + text + "\t}\n}"
-                    + "catch($__EXCEPTION__){\n\treturn $__EXCEPTION__;\n}\n";
                 return _this;
             }
+            ComputedExpression.prototype.gothrough = function (onProp) {
+                if (this.path) {
+                    this.path.gothrough(onProp);
+                }
+                else {
+                    for (var i in this.paths) {
+                        var expr = this.paths[i];
+                        expr.gothrough(onProp);
+                    }
+                }
+            };
+            ComputedExpression.prototype.getValue = function (data) {
+                if (this.path) {
+                    var result = this.path.getValue(data);
+                    this.getValue = this.path.getValue;
+                    return result;
+                }
+                else {
+                    var code = this.getCode();
+                    this.getValue = new Function("$__DATA__", code);
+                    return this.getValue(data);
+                }
+            };
+            ComputedExpression.prototype.getCode = function (asValue) {
+                if (this.path)
+                    return this.path.getCode(asValue);
+                var code = "with($__DATA__){ return \n" + this.text + ";\n}";
+                if (asValue) {
+                    code = "(function($__DATA__){" + code + "})($__DATA)";
+                }
+                return code;
+            };
             return ComputedExpression;
         }(Expression));
         Models.ComputedExpression = ComputedExpression;
+        Expression.ComputedExpression = ComputedExpression;
         var MixedExpression = /** @class */ (function (_super) {
             __extends(MixedExpression, _super);
-            function MixedExpression(text, exprs) {
+            function MixedExpression(text, onProp) {
                 var _this = _super.call(this, ExpressionTypes.mixed, text) || this;
+                var exprs = new Models.ExpressionParser(text, onProp).exprs;
                 _this.exprs = exprs;
                 if (exprs.length === 1) {
                     _this.expr = exprs[0];
                 }
                 return _this;
             }
+            MixedExpression.prototype.gothrough = function (onProp) {
+                if (this.expr) {
+                    this.expr.gothrough(onProp);
+                }
+                else {
+                    for (var i in this.exprs) {
+                        var ex = this.exprs[i];
+                        if (!(ex instanceof ConstExpression)) {
+                            ex.gothrough(onProp);
+                        }
+                    }
+                }
+            };
+            MixedExpression.prototype.getValue = function (data) {
+                if (this.expr) {
+                    var value = this.expr.getValue(data);
+                    this.getValue = this.expr.getValue;
+                    return value;
+                }
+                else {
+                    var code = this.getCode();
+                    this.getValue = new Function("$__DATA__", code);
+                    return this.getValue(data);
+                }
+            };
+            MixedExpression.prototype.getCode = function (asValue) {
+                if (this.expr) {
+                    return this.expr.getCode(asValue);
+                }
+                else {
+                    var code = "var $__RESULT__=\"\";\n";
+                    for (var i in this.exprs) {
+                        code += "$__RESULT__ +=" + this.exprs[i].getValue(true) + ";\n";
+                    }
+                    code += "return $__DATA__;";
+                    if (asValue) {
+                        code = "(function($__DATA__){" + code + "})($__DATA__)";
+                    }
+                    return code;
+                }
+            };
             return MixedExpression;
         }(Expression));
         Models.MixedExpression = MixedExpression;
-        function makeMixedAccess(expr, root) {
-            var _this = this;
-            var accesses = [];
-            var deps = [];
-            for (var i in expr.exprs) {
-                var access_1 = expr.exprs[i].genAccess(root);
-                accesses.push(access_1);
-                var subdeps = access_1.deps;
-                if (subdeps) {
-                    for (var m in subdeps) {
-                        var subdep = subdeps[m];
-                        for (var v in deps) {
-                            if (deps[v] === subdep) {
-                                subdep = null;
-                            }
-                        }
-                        if (subdep) {
-                            deps.push(subdep);
-                        }
-                    }
-                }
-            }
-            var access = function (data, value, evt) {
-                if (value === undefined) {
-                    var rs = [];
-                    for (var i in accesses) {
-                        var part = accesses[i].call(_this, data);
-                        if (part !== undefined && part !== null)
-                            rs.push(part);
-                    }
-                    return rs.join("");
-                }
-                for (var i in accesses) {
-                    accesses[i].call(_this, data, value, evt);
-                }
-                return _this;
-            };
-            access.deps = deps;
-            return access;
-        }
+        Expression.MixedExpression = MixedExpression;
         var InvalidExpression = /** @class */ (function (_super) {
             __extends(InvalidExpression, _super);
             function InvalidExpression(message, text, at, lineAt, offset) {
@@ -214,7 +329,7 @@ var Quic;
                 }
                 if (this.inComputed) {
                     if (--this.braceCount == 0) {
-                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt + 1, at)));
+                        this.exprs.push(new ComputedExpression(text.substring(this.lastTokenAt + 1, at), this.onProp));
                         this.inComputed = false;
                         return true;
                     }
@@ -266,10 +381,11 @@ var Quic;
                 return true;
             }
         };
-        Models.ExpressionParser = function (text) {
+        Models.ExpressionParser = function (text, onProp) {
             this.exprs = [];
             this.braceCount = 0;
             this.lastTokenAt = -1;
+            this.onProp = onProp;
             expressionReader(text, this);
         };
         Models.ExpressionParser.prototype = expressionParser;
@@ -289,7 +405,7 @@ var Quic;
                 if (match) {
                     this.members.push({ name: match[1], isIndex: false });
                     if (this.onProp)
-                        this.onProp(match[1], false);
+                        this.onProp(match[1], false, text);
                     return true;
                 }
                 throw new Error("Invalid MemberAccess expression:" + text);
@@ -301,7 +417,7 @@ var Quic;
                 if (match) {
                     this.members.push({ name: match[1], isIndex: true });
                     if (this.onProp)
-                        this.onProp(match[1], true);
+                        this.onProp(match[1], true, text);
                     return true;
                 }
                 throw new Error("Invalid MemberAccess expression:" + text);
@@ -339,9 +455,10 @@ var Quic;
                 return this.meetProp(text, text.length, true);
             }
         };
-        Models.MemberAccessParser = function (text) {
+        Models.MemberAccessParser = function (text, onProp) {
             this.members = [];
             this.lastTokenAt = -1;
+            this.onProp = onProp;
             expressionReader(text, this);
         };
         Models.MemberAccessParser.prototype = memberAccess;

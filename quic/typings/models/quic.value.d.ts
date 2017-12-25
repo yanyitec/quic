@@ -1,16 +1,20 @@
 /// <reference path="quic.schema.d.ts" />
+/// <reference path="../base/quic.utils.d.ts" />
 /// <reference path="../base/quic.observable.d.ts" />
 declare namespace Quic {
     namespace Models {
         interface IDataValue {
+            $super: any;
+            $root: any;
+            _$schema: any;
             subscribe(listener: IValueChangeListener): IDataValue;
             unsubscibe(listener: IValueChangeListener): IDataValue;
             get_value(fillDefault?: boolean): any;
             set_value(value: any, evtArgs?: any): any;
             notify(evt: ValueChangeEventArgs): any;
-            define(text: string): IDataValue;
+            find(text: string): IDataValue;
+            parse(text: string): IDataValue;
             delete(name: string): IDataValue;
-            updateSchema(): IDataValue;
         }
         interface ValueChangeEventArgs {
             value: any;
@@ -18,14 +22,20 @@ declare namespace Quic {
             publisher: IDataValue;
             src: ValueChangeEventArgs;
             index?: number;
+            cancel?: boolean;
         }
         interface IValueChangeListener {
             (value: any, publisher: IDataValue, evtArgs: ValueChangeEventArgs): any;
         }
         class DataValue implements IDataValue {
-            _$superior: IDataValue;
+            $super: IDataValue;
+            $root: IDataValue;
             _$schema: ISchema;
+            _$data: any;
             __listeners?: Array<IValueChangeListener>;
+            __computes?: {
+                [index: string]: DataValue;
+            };
             length?: number;
             constructor(schema: ISchema, superior: IDataValue);
             get_data(): any;
@@ -34,9 +44,9 @@ declare namespace Quic {
             subscribe(listener: IValueChangeListener): IDataValue;
             unsubscibe(listener: IValueChangeListener): IDataValue;
             notify(evtArgs: ValueChangeEventArgs): IDataValue;
-            define(text: string): IDataValue;
+            find(text: string): IDataValue;
+            parse(text: string): IDataValue;
             delete(name: string | number): IDataValue;
-            updateSchema(): IDataValue;
             toString(): any;
         }
     }
