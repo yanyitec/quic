@@ -1,7 +1,6 @@
 /// <reference path="../base/quic.utils.ts" />
 /// <reference path="../base/quic.observable.ts" />
 /// <reference path="quic.expression.ts" />
-/// <reference path="../quic.package.ts" />
 
 namespace Quic{
     export namespace Models{
@@ -15,14 +14,16 @@ namespace Quic{
             text:string;
             schema :ISchema;
         }
-        export interface ISchema{
+        export interface IDataDefiner{
+            define(name:string):IDataDefiner;
+            find(expr:string,onProperty?:IOnProperty):IDataDefiner;
+            parse(expr:string,onProperty?:IOnProperty):DefineOpts|IDataDefiner;
+        }
+        export interface ISchema extends IDataDefiner {
             props:{[name:string]:ISchema};
             indexs:{[name:number]:ISchema};
             itemSchema:ISchema;
-            prop(name:string):ISchema;
-            index(nameOrIndex:string|number):ISchema;
-            find(expr:string,onProperty?:IOnProperty):ISchema;
-            parse(expr:string,onProperty?:IOnProperty):DefineOpts;
+            
             name:string|number;
             composite:ISchema;
             isArray:boolean;
@@ -52,29 +53,23 @@ namespace Quic{
                 }
             }
 
-            prop(name:string):ISchema{
-                let result = (this.props|| (this.props={}))[name];
-                if(!result){
-                    this.props[name]=new Schema(name,this);
-                    this.isObject=true;
-                }
-                return result;
-            }
-            index(name:string):ISchema{
-                let result:ISchema;
-                if(name===""){
-                    result = this.itemSchema;
-                }else {
-                    result = (this.props|| (this.props={}))[name];
-                }
-                
-                if(!result){
+            define(name:string):IDataDefiner{
+                let result :IDataDefiner;
+                if(name==="quic:array"){
                     result = this.itemSchema || (this.itemSchema = new Schema("[quic:index]",this));
-                    if(name)this.props[name]=result;
                     this.isObject=this.isArray=true;
+                }else {
+                    if(this.isArray) throw new Exception("cannot define prop in Array model");
+                    result = (this.props|| (this.props={}))[name];
+                    if(!result){
+                        this.props[name]=new Schema(name,this);
+                        this.isObject=true;
+                    }
                 }
                 return result;
             }
+
+            
             find(text:string,onProperty?:IOnProperty):ISchema{
                 let exprs = this.__defines ||(this.__defines={});
                 let def :DefineOpts = exprs[text];
@@ -88,9 +83,9 @@ namespace Quic{
                             else throw new Error("invalid expression,no more $SUPER:"+text);
                         }else {
                             if(isArray){
-                                schema.index(name);
+                                schema.define("quic:array");
                             }else {
-                                schema.prop(name);
+                                schema.define(name);
                             }
                         }
                         if(onProperty) onProperty(name,schema);
@@ -110,9 +105,9 @@ namespace Quic{
                             else throw new Error("invalid expression,no more $SUPER:"+text);
                         }else {
                             if(member.isIndex){
-                                schema = schema.index(member.name);
+                                schema = schema.define("quic:array") as ISchema;
                             }else {
-                                schema = schema.prop(member.name);
+                                schema = schema.define(member.name) as ISchema;
                             }
                         }
                         if(onProperty) onProperty(member.name,schema);
@@ -140,9 +135,9 @@ namespace Quic{
                         else throw new Error("invalid expression,no more $SUPER:"+text);
                     }else {
                         if(isArr){
-                            schema = schema.index(name);
+                            schema = schema.define("quic:array") as ISchema;
                         }else {
-                            schema = schema.prop(name);
+                            schema = schema.define(name) as ISchema;
                         }
                     }
                     if(onProperty) onProperty(name,schema,reset);

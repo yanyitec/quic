@@ -3,7 +3,7 @@
 /// <reference path="../base/quic.observable.d.ts" />
 declare namespace Quic {
     namespace Models {
-        interface IDataValue {
+        interface IDataValue extends IDataDefiner {
             $super: any;
             $root: any;
             _$schema: any;
@@ -12,8 +12,6 @@ declare namespace Quic {
             get_value(fillDefault?: boolean): any;
             set_value(value: any, evtArgs?: any): any;
             notify(evt: ValueChangeEventArgs): any;
-            find(text: string): IDataValue;
-            parse(text: string): IDataValue;
             delete(name: string): IDataValue;
         }
         interface ValueChangeEventArgs {
@@ -44,8 +42,9 @@ declare namespace Quic {
             subscribe(listener: IValueChangeListener): IDataValue;
             unsubscibe(listener: IValueChangeListener): IDataValue;
             notify(evtArgs: ValueChangeEventArgs): IDataValue;
-            find(text: string): IDataValue;
-            parse(text: string): IDataValue;
+            define(name: string): IDataDefiner;
+            find(text: string, onProp?: IOnProperty): IDataDefiner;
+            parse(text: string, onProp?: IOnProperty): IDataDefiner;
             delete(name: string | number): IDataValue;
             toString(): any;
         }

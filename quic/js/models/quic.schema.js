@@ -18,27 +18,20 @@ var Quic;
                     this.root = this;
                 }
             }
-            Schema.prototype.prop = function (name) {
-                var result = (this.props || (this.props = {}))[name];
-                if (!result) {
-                    this.props[name] = new Schema(name, this);
-                    this.isObject = true;
-                }
-                return result;
-            };
-            Schema.prototype.index = function (name) {
+            Schema.prototype.define = function (name) {
                 var result;
-                if (name === "") {
-                    result = this.itemSchema;
+                if (name === "quic:array") {
+                    result = this.itemSchema || (this.itemSchema = new Schema("[quic:index]", this));
+                    this.isObject = this.isArray = true;
                 }
                 else {
+                    if (this.isArray)
+                        throw new Quic.Exception("cannot define prop in Array model");
                     result = (this.props || (this.props = {}))[name];
-                }
-                if (!result) {
-                    result = this.itemSchema || (this.itemSchema = new Schema("[quic:index]", this));
-                    if (name)
-                        this.props[name] = result;
-                    this.isObject = this.isArray = true;
+                    if (!result) {
+                        this.props[name] = new Schema(name, this);
+                        this.isObject = true;
+                    }
                 }
                 return result;
             };
@@ -59,10 +52,10 @@ var Quic;
                         }
                         else {
                             if (isArray) {
-                                schema.index(name);
+                                schema.define("quic:array");
                             }
                             else {
-                                schema.prop(name);
+                                schema.define(name);
                             }
                         }
                         if (onProperty)
@@ -88,10 +81,10 @@ var Quic;
                         }
                         else {
                             if (member.isIndex) {
-                                schema = schema.index(member.name);
+                                schema = schema.define("quic:array");
                             }
                             else {
-                                schema = schema.prop(member.name);
+                                schema = schema.define(member.name);
                             }
                         }
                         if (onProperty)
@@ -126,10 +119,10 @@ var Quic;
                     }
                     else {
                         if (isArr) {
-                            schema = schema.index(name);
+                            schema = schema.define("quic:array");
                         }
                         else {
-                            schema = schema.prop(name);
+                            schema = schema.define(name);
                         }
                     }
                     if (onProperty)

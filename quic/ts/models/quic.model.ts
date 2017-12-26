@@ -7,13 +7,11 @@
 /// <reference path="quic.schema.ts" />
 /// <reference path="quic.expression.ts" />
 /// <reference path="quic.value.ts" />
-/// <reference path="../quic.package.ts" />
 namespace Quic{
     export namespace Models{
         export interface IModel extends IDataValue{
-            _$opts:ModelOpts;
-            _$rawData:any;
-            
+            $model_state:ModelState;
+            fetch():IPromise;
         }
         export interface IModelAccess{
             (value?:any,evt?:any):any;
@@ -27,7 +25,7 @@ namespace Quic{
             src_model?:IModel;
             schema?:ISchema;
         }
-        export class Model extends DataValue{
+        export class Model extends DataValue implements IModel {
             $model_state:ModelState;
             //transport:TransportOpts;
             constructor(opts:ModelOpts){
@@ -71,7 +69,7 @@ namespace Quic{
                 if(this.__fetchPromise===null){
                     return this.__fetchPromise = new Promise((resolve,reject)=>{
                         let transOpts:TransportOpts = deepClone(this.transport);
-                        transOpts.url = this.model.parse(this.transport.url).get_value();
+                        transOpts.url = (this.model.parse(this.transport.url) as IModel).get_value();
                         //this.notify("onfetching",transOpts);
                         Quic.transport(transOpts).then((result)=>{
                             this._onDataArrived(result,resolve,reject);                            
@@ -104,14 +102,14 @@ namespace Quic{
         }
         
         function imports(destModel:IDataValue,srcModel:IDataValue,key:string,value:any):Function{
-            let destValue = destModel.find(key);
+            let destValue = destModel.find(key) as IModel;
             if(typeof value==="string" && value.length>3 && value[0]==="$" && value[value.length-1]==="}"){
                 let expr :IDataValue;let dbBind=false;
                 if(value[1]==="{"){
-                    expr = srcModel.parse(value);
+                    expr = srcModel.parse(value) as IModel;
                     destValue.set_value(expr.get_value());
                 }else if(value[1]==="$" && value[2]==="{"){
-                    expr = srcModel.parse(value.substr(1));
+                    expr = srcModel.parse(value.substr(1)) as IModel;
                     destValue.set_value(expr.get_value());
                     expr.subscribe((value,publisher,evt)=>{
                         destValue.set_value(value);

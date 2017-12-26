@@ -1,7 +1,6 @@
 /// <reference path="../base/quic.utils.d.ts" />
 /// <reference path="../base/quic.observable.d.ts" />
 /// <reference path="quic.expression.d.ts" />
-/// <reference path="../quic.package.d.ts" />
 declare namespace Quic {
     namespace Models {
         interface IOnProperty {
@@ -12,7 +11,12 @@ declare namespace Quic {
             text: string;
             schema: ISchema;
         }
-        interface ISchema {
+        interface IDataDefiner {
+            define(name: string): IDataDefiner;
+            find(expr: string, onProperty?: IOnProperty): IDataDefiner;
+            parse(expr: string, onProperty?: IOnProperty): DefineOpts;
+        }
+        interface ISchema extends IDataDefiner {
             props: {
                 [name: string]: ISchema;
             };
@@ -20,10 +24,6 @@ declare namespace Quic {
                 [name: number]: ISchema;
             };
             itemSchema: ISchema;
-            prop(name: string): ISchema;
-            index(nameOrIndex: string | number): ISchema;
-            find(expr: string, onProperty?: IOnProperty): ISchema;
-            parse(expr: string, onProperty?: IOnProperty): DefineOpts;
             name: string | number;
             composite: ISchema;
             isArray: boolean;
@@ -50,8 +50,7 @@ declare namespace Quic {
                 [index: string]: DefineOpts;
             };
             constructor(name?: string, composite?: ISchema);
-            prop(name: string): ISchema;
-            index(name: string): ISchema;
+            define(name: string): IDataDefiner;
             find(text: string, onProperty?: IOnProperty): ISchema;
             parse(text: string, onProperty?: IOnProperty): DefineOpts;
         }

@@ -97,7 +97,7 @@ var Quic;
         }());
         Models.ModelState = ModelState;
         function imports(destModel, srcModel, key, value) {
-            var destValue = destModel.define(key);
+            var destValue = destModel.find(key);
             if (typeof value === "string" && value.length > 3 && value[0] === "$" && value[value.length - 1] === "}") {
                 var expr_1;
                 var dbBind = false;

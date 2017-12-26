@@ -18,6 +18,7 @@ var Quic;
                         notify: function () { return this; },
                         get_value: function () { return mockData_1; },
                         set_value: function () { throw new Error("invalid operation"); },
+                        define: function () { throw new Error("invalid operation"); },
                         find: function () { throw new Error("invalid operation"); },
                         parse: function () { throw new Error("invalid operation"); },
                         delete: function () { return this; }
@@ -142,7 +143,18 @@ var Quic;
                 }
                 return this;
             };
-            DataValue.prototype.find = function (text) {
+            DataValue.prototype.define = function (name) {
+                var me = this;
+                if (name === 'quic:array') {
+                    var itemSchema = this._$schema.define("quic:array");
+                    return null;
+                }
+                else {
+                    var schema = this._$schema.define(name);
+                    return me[name] = new DataValue(schema, this);
+                }
+            };
+            DataValue.prototype.find = function (text, onProp) {
                 var _this = this;
                 var dataValue = this;
                 this._$schema.find(text, function (propname, schema) {
@@ -154,7 +166,7 @@ var Quic;
                 });
                 return dataValue;
             };
-            DataValue.prototype.parse = function (text) {
+            DataValue.prototype.parse = function (text, onProp) {
                 var _this = this;
                 var deps = [];
                 var dataValue = this;

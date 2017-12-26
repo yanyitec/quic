@@ -1,7 +1,6 @@
 /// <reference path="../base/quic.observable.ts" />
 /// <reference path="../base/quic.context.ts" />
 /// <reference path="../models/quic.model.ts" />
-/// <reference path="../quic.package.ts" />
 namespace Quic{
     export namespace Views{
         export interface ViewOpts{
@@ -17,9 +16,22 @@ namespace Quic{
     
             position?:string;
             validations?:{[index:string]:any};
-    
-    
+            events?:{[index:string]:Function};
         }
+        export let viewOptsKeymembers ={
+            perm:true,
+            datapath:true,
+            text:true,
+            template:true,
+            css:true,
+            dataType:true,
+            viewType:true,
+            desciption:true,
+    
+            position:true,
+            validations:true,
+            events:true
+        };
         export interface ILocalizable{
             
         }
@@ -40,22 +52,23 @@ namespace Quic{
             opts:ViewOpts;
             
             model:Models.IModel;
-            package:IPackage;
+            quic:IQuicInstance;
             protected _permission:string;
             protected _originPermission:string;
             protected _validatable?:boolean;
             protected _disabled?:Array<Node>;
     
-            constructor(opts:ViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
+            constructor(opts:ViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 super();
                 if(!opts) return;
-                this.init(opts,composite, model, pack);
+                this.init(opts,composite, model, quic);
             }
             
             id():string{
-                let id = this.idprefix + (this.package? this.package.idNo():idNo());
-                this.id =()=>id;
-                return id;
+                //let id = this.idprefix + (this.package? this.package.idNo():idNo());
+                //this.id =()=>id;
+                //return id;
+                return null;
             }
     
             disabled(value?:boolean){
@@ -205,13 +218,11 @@ namespace Quic{
             dispose(){
     
             }
-            _T(key:string,returnRequired?:boolean):string{
-                return (this.package)
-                    ?this.package._T(key, returnRequired)
-                    :key;
+            _T(key:string):string{
+                return this.quic._T(key);
             }
     
-            protected init(opts:ViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
+            protected init(opts:ViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 this.opts = opts;
                 
                 this.name = opts.name;
@@ -239,12 +250,12 @@ namespace Quic{
                 css += " ";
                 this.css = css;
     
-                this.model = model || (composite?composite.model:null);
+                this.model = model ;
                 let dataPath = opts.datapath || this.name;
-                this.value = this.model.access(opts.datapath);
+                //this.value = this.model.access(opts.datapath);
     
-                if(!(this.package = pack) && this.composite) {
-                    this.package = this.composite.package;
+                if(!(this.quic = quic) && this.composite) {
+                    this.quic = this.composite.quic;
                 }
                 
             }
@@ -317,7 +328,7 @@ namespace Quic{
                 cloneView.css = src.css;
                 cloneView.description = src.description;
                 cloneView.idprefix = src.idprefix;
-                cloneView.package = src.package;
+                cloneView.quic = src.quic;
                 if(src.validations){
                     let valids ={};
                     for(let validname in src.validations){

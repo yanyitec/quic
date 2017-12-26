@@ -4,7 +4,7 @@
 /// <reference path="../base/quic.observable.ts" />
 namespace Quic{
     export namespace Models{
-        export interface IDataValue{
+        export interface IDataValue extends IDataDefiner{
             $super;
             $root;
             _$schema;
@@ -13,9 +13,10 @@ namespace Quic{
             get_value(fillDefault?:boolean):any;
             set_value(value:any,evtArgs?:any):any;
             notify(evt:ValueChangeEventArgs);
-            find(text:string):IDataValue;
-            parse(text:string):IDataValue;
             delete(name:string):IDataValue;
+            define(name:string):IDataValue;
+            find(expr:string,onProperty?:IOnProperty):IDataValue;
+            parse(expr:string,onProperty?:IOnProperty):IDataValue;
         }
         export interface ValueChangeEventArgs{
             value:any;
@@ -33,10 +34,12 @@ namespace Quic{
             $root:IDataValue;
             _$schema:ISchema;
             _$data:any;
+            __name :string|number;
+            __item:IDataValue;
             __listeners?:Array<IValueChangeListener>;
             __computes?:{[index:string]:DataValue};
             length?:number;
-            constructor(schema:ISchema,superior:IDataValue){
+            constructor(schema:ISchema,superior:IDataValue,specialname ?:number|string){
                 if(!superior){
                     let mockData = {};
                     superior = {
@@ -48,6 +51,7 @@ namespace Quic{
                         notify:function(){return this;},
                         get_value:function(){return mockData;},
                         set_value :function(){throw new Error("invalid operation");},
+                        define:function(){throw new Error("invalid operation");},
                         find:function(){throw new Error("invalid operation");},
                         parse:function(){throw new Error("invalid operation");},
                         delete:function(){return this;}
@@ -58,7 +62,7 @@ namespace Quic{
                     this.$root = superior.$root;
                 }
                 if(schema!==null){
-                    this._$schema = schema || new Schema();
+                    this._$schema = schema ||(schema= new Schema());
                     if(schema.isObject){
                         let me :any = this;
                         for(let propname in schema.props){
@@ -66,6 +70,7 @@ namespace Quic{
                         }
                     }
                 }
+                this.__name = specialname===undefined?schema.name:specialname;
                 
             }
             get_data():any{
@@ -80,7 +85,7 @@ namespace Quic{
            
             get_value():any{
                 let schema = this._$schema;
-                let result = this.get_data()[schema.name];
+                let result = this.get_data()[this.__name];
                 if(!result && schema.isObject){
                     result = schema.isArray?[]:{};
                     this.$super.set_value(result,false);
@@ -92,7 +97,7 @@ namespace Quic{
             }
             set_value(value:any,srcEvtArgs?:any):any{
                 let schema :ISchema = this._$schema;
-                let name = schema.name;
+                let name = this.__name;
                 let data: any = this.get_data();
                 //整理值。如果schema是object/array，必须是正确的对象
                 if(!value){
@@ -170,7 +175,24 @@ namespace Quic{
                 }
                 return this;
             }
-            find(text:string):IDataValue{
+            define(name:string|number):IDataValue{
+                let me :any = this;
+                let schema :ISchema = this._$schema;
+                if(name==='quic:array') {
+                    let subschema = schema.define("quic:array") as ISchema;
+                    if(!this.__item) this.__item = new DataValue(subschema,this);
+                    return this.__item;
+                }else {
+                    if(schema.isArray){
+                        return me[name] = new DataValue(schema.itemSchema,this,name);
+                    }else {
+                        let schema = this._$schema.define(name.toString()) as ISchema;
+                        return me[name] = new DataValue(schema,this);
+                    }
+                    
+                }
+            }
+            find(text:string,onProp?:IOnProperty):IDataValue{
                 let dataValue:any = this;
                 this._$schema.find(text,(propname,schema)=>{
                     let prop :DataValue = dataValue[propname];
@@ -182,7 +204,7 @@ namespace Quic{
                 });
                 return dataValue;
             }
-            parse(text:string):IDataValue{
+            parse(text:string,onProp?:IOnProperty):IDataValue{
                 let deps:Array<IDataValue> = [];
                 let dataValue:DataValue=this;
                 let me = this;
@@ -197,7 +219,7 @@ namespace Quic{
                         dataValue[propname] = new DataValue(schema.itemSchema||schema,this);
                     }
                     dataValue = prop;
-                });
+                }) as DefineOpts;
                 if(def.schema || (deps.length===1 && deps[0]===dataValue)){
                     return dataValue;
                 } else {

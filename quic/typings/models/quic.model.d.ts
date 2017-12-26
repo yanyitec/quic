@@ -6,12 +6,11 @@
 /// <reference path="quic.schema.d.ts" />
 /// <reference path="quic.expression.d.ts" />
 /// <reference path="quic.value.d.ts" />
-/// <reference path="../quic.package.d.ts" />
 declare namespace Quic {
     namespace Models {
         interface IModel extends IDataValue {
-            _$opts: ModelOpts;
-            _$rawData: any;
+            $opts: ModelOpts;
+            $rawData: any;
         }
         interface IModelAccess {
             (value?: any, evt?: any): any;
