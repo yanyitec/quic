@@ -13,6 +13,9 @@ declare namespace Quic {
             set_value(value: any, evtArgs?: any): any;
             notify(evt: ValueChangeEventArgs): any;
             delete(name: string): IDataValue;
+            define(name: string): IDataValue;
+            find(expr: string, onProperty?: IOnProperty): IDataValue;
+            parse(expr: string, onProperty?: IOnProperty): IDataValue;
         }
         interface ValueChangeEventArgs {
             value: any;
@@ -30,21 +33,23 @@ declare namespace Quic {
             $root: IDataValue;
             _$schema: ISchema;
             _$data: any;
+            __name: string | number;
+            __item: IDataValue;
             __listeners?: Array<IValueChangeListener>;
             __computes?: {
                 [index: string]: DataValue;
             };
             length?: number;
-            constructor(schema: ISchema, superior: IDataValue);
+            constructor(schema: ISchema, superior: IDataValue, specialname?: number | string);
             get_data(): any;
             get_value(): any;
             set_value(value: any, srcEvtArgs?: any): any;
             subscribe(listener: IValueChangeListener): IDataValue;
             unsubscibe(listener: IValueChangeListener): IDataValue;
             notify(evtArgs: ValueChangeEventArgs): IDataValue;
-            define(name: string): IDataDefiner;
-            find(text: string, onProp?: IOnProperty): IDataDefiner;
-            parse(text: string, onProp?: IOnProperty): IDataDefiner;
+            define(name: string | number): IDataValue;
+            find(text: string, onProp?: IOnProperty): IDataValue;
+            parse(text: string, onProp?: IOnProperty): IDataValue;
             delete(name: string | number): IDataValue;
             toString(): any;
         }

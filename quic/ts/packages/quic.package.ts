@@ -1,7 +1,7 @@
 /// <reference path="../views/quic.view.ts" />
 namespace Quic{
     export namespace Packages{
-        export interface IPackage{
+        export interface IPackage extends IPromise{
             //idNo():string;
             /**
              * 获取文本信息
@@ -23,12 +23,16 @@ namespace Quic{
     
         }
     
-        export class Package{
+        export class Package extends Promise{
             fields:{[index:string]:Views.ViewOpts};
             field_settings:{[index:string]:{[index:string]:Views.ViewOpts}};
             dynamic:boolean;
             constructor(opts:any){
-                if(!opts) this.dynamic=true;
+                super((resolve,reject)=>{
+                    this.fields  = this.field_config(opts.setting||"detail",opts.fields || opts.includes);
+                    resolve(this);
+                });
+                this.field_settings = {};
             }
             field_config(setting:string,includes?:{[index:string]:Views.ViewOpts},excludes?:Array<string>){
                 if(!this.fields) this.dynamic = true;
@@ -63,6 +67,7 @@ namespace Quic{
                 let include = includes[name];
                 let origin = origins[name];
                 if(!origin){ continue; }
+                if(include===origin){ continue;}
                 if(excludes){
                     let isDenied;
                     for(let i in excludes){
@@ -70,8 +75,9 @@ namespace Quic{
                     }
                     if(isDenied) continue;
                 }
+                
                 let field = result[name] = deepClone(origin);
-                if(include===origin){ continue;}
+                
                 extend(field,include,false);
             }
             return result;

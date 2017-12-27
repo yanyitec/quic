@@ -1,6 +1,7 @@
 /// <reference path="../base/quic.observable.ts" />
 /// <reference path="../base/quic.context.ts" />
 /// <reference path="../models/quic.model.ts" />
+/// <reference path="../quic.instance.ts" />
 namespace Quic{
     export namespace Views{
         export interface ViewOpts{
@@ -221,7 +222,6 @@ namespace Quic{
             _T(key:string):string{
                 return this.quic._T(key);
             }
-    
             protected init(opts:ViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 this.opts = opts;
                 
@@ -230,9 +230,9 @@ namespace Quic{
                 this.viewType = opts.viewType || this.dataType;
                 this.validations = opts.validations;
                 this._permission = opts.perm;
-                this.text = opts.text || this._T(this.name);
+                this.text = opts.text || quic._T(this.name);
                 if(opts.desciption) {
-                    this.description = this._T(this.description);
+                    this.description = quic._T(this.description);
                 }else this.description = this.text;
     
                 this.composite = composite;
@@ -259,6 +259,7 @@ namespace Quic{
                 }
                 
             }
+            
     
             protected render_visibleonly(decoration?:boolean):HTMLElement{
                 let element = ctx.createElement("span");
@@ -344,6 +345,8 @@ namespace Quic{
             static viewTypes:{[index:string]:any}={"view":View};
     
         }
+        
+
         let idseed = 0;
         function idNo(){
             if(++idseed>210000000) idseed=0;

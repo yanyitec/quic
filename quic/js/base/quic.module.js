@@ -10,78 +10,6 @@ var __extends = (this && this.__extends) || (function () {
 })();
 var Quic;
 (function (Quic) {
-    var head;
-    var loadScript = Quic.ctx.loadScript = function (url, extras) {
-        if (!head) {
-            var heads = Quic.ctx.getElementsByTagName("head");
-            head = heads[0];
-        }
-        var result = new Quic.Promise(function (resolve, reject) {
-            var element = Quic.ctx.createElement("script");
-            element.type = "text/script";
-            element.src = url;
-            element.onerror = function (ev) { return reject(ev); };
-            if (element.onreadystatechange !== undefined) {
-                element.onreadystatechange = function (e) {
-                    if (element.readyState === 'complete' || element.readyState === 4) {
-                        var exports_1 = window["exports"];
-                        window["exports"] = undefined;
-                        head.removeChild(element);
-                        resolve(exports_1);
-                    }
-                };
-            }
-            else {
-                element.onload = function () {
-                    var exports = window["exports"];
-                    window["exports"] = undefined;
-                    head.removeChild(element);
-                    resolve(exports);
-                };
-            }
-            head.appendChild(element);
-        });
-        result.extras = extras;
-        return result;
-    };
-    var loadCss = Quic.ctx.loadCss = function (url, extras) {
-        if (!head) {
-            var heads = Quic.ctx.getElementsByTagName("head");
-            head = heads[0];
-        }
-        var result = new Quic.Promise(function (resolve, reject) {
-            var element = Quic.ctx.createElement("link");
-            element.type = "text/css";
-            element.href = url;
-            element.rel = "stylesheet";
-            element.onerror = function (ev) { return reject(ev); };
-            if (element.onreadystatechange !== undefined) {
-                element.onreadystatechange = function (e) {
-                    if (element.readyState === 'complete' || element.readyState === 4) {
-                        var exports_2 = window["exports"];
-                        window["exports"] = undefined;
-                        head.removeChild(element);
-                        resolve();
-                    }
-                };
-            }
-            else {
-                element.onload = function () {
-                    var exports = window["exports"];
-                    window["exports"] = undefined;
-                    head.removeChild(element);
-                    resolve();
-                };
-            }
-            head.appendChild(element);
-        });
-        result.extras = extras;
-        return result;
-    };
-    Quic.ctx.loadContent = function (url, extras) { return Quic.ajax({
-        url: url,
-        method: "get"
-    }); };
     var Module = /** @class */ (function (_super) {
         __extends(Module, _super);
         function Module(name) {
@@ -142,7 +70,7 @@ var Quic;
             module = new Module(name);
             cached_modules[name] = module;
             var url = name; // makeUrl(name);
-            var res = loadScript(url).then(function (scriptExports) {
+            var res = Quic.ctx.loadScript(url).then(function (scriptExports) {
                 if (scriptExports.__isdefine__) {
                     scriptExports.then(function (defineResults) {
                         module.resolve(defineResults.value);

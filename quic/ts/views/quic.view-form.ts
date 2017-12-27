@@ -2,8 +2,6 @@
 namespace Quic{
     export namespace Views{
         export interface FormViewOpts extends ViewOpts{
-            
-
             fields?:{[index:string]:ViewOpts};
             title?:string;
         }
@@ -13,8 +11,9 @@ namespace Quic{
             opts:FormViewOpts;
             components:{[index:string]:View};
             
-            constructor(opts:FormViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
-                super(opts,composite,model,pack);
+            constructor(opts:FormViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
+                super(opts,composite,model,quic);
+                this.viewType = "form";
             }
             permission(value?:string):any{
                 if(value===undefined) {
@@ -99,8 +98,8 @@ namespace Quic{
                 return this.render(decoration);
             }
     
-            protected init(opts:FormViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
-                super.init(opts, composite, model,pack);
+            protected init(opts:FormViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
+                super.init(opts, composite, model,quic);
                 this.components = {};
                 if(opts.fields){
                     let compoments = this.components ={};
@@ -110,7 +109,7 @@ namespace Quic{
                         let viewType = child.viewType || child.dataType || "text";
                         let ViewCls :any = viewTypes[viewType] || viewTypes[viewType = "text"];
                         child.viewType = viewType;
-                        if(opts.name && opts.name!=viewname){ctx.throw("View name in opts is different from components");}
+                        if(opts.name && opts.name!=viewname){throw new Error("View name in opts is different from components");}
                         compoments[viewname] = new View(child,this);
                     }
                 }

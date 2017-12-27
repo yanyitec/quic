@@ -6,7 +6,7 @@ var Quic;
     var Models;
     (function (Models) {
         var DataValue = /** @class */ (function () {
-            function DataValue(schema, superior) {
+            function DataValue(schema, superior, specialname) {
                 if (!superior) {
                     var mockData_1 = {};
                     superior = {
@@ -29,7 +29,7 @@ var Quic;
                     this.$root = superior.$root;
                 }
                 if (schema !== null) {
-                    this._$schema = schema || new Models.Schema();
+                    this._$schema = schema || (schema = new Models.Schema());
                     if (schema.isObject) {
                         var me = this;
                         for (var propname in schema.props) {
@@ -37,6 +37,7 @@ var Quic;
                         }
                     }
                 }
+                this.__name = specialname === undefined ? schema.name : specialname;
             }
             DataValue.prototype.get_data = function () {
                 if (this._$data === undefined) {
@@ -49,7 +50,7 @@ var Quic;
             };
             DataValue.prototype.get_value = function () {
                 var schema = this._$schema;
-                var result = this.get_data()[schema.name];
+                var result = this.get_data()[this.__name];
                 if (!result && schema.isObject) {
                     result = schema.isArray ? [] : {};
                     this.$super.set_value(result, false);
@@ -61,7 +62,7 @@ var Quic;
             };
             DataValue.prototype.set_value = function (value, srcEvtArgs) {
                 var schema = this._$schema;
-                var name = schema.name;
+                var name = this.__name;
                 var data = this.get_data();
                 //整理值。如果schema是object/array，必须是正确的对象
                 if (!value) {
@@ -145,13 +146,21 @@ var Quic;
             };
             DataValue.prototype.define = function (name) {
                 var me = this;
+                var schema = this._$schema;
                 if (name === 'quic:array') {
-                    var itemSchema = this._$schema.define("quic:array");
-                    return null;
+                    var subschema = schema.define("quic:array");
+                    if (!this.__item)
+                        this.__item = new DataValue(subschema, this);
+                    return this.__item;
                 }
                 else {
-                    var schema = this._$schema.define(name);
-                    return me[name] = new DataValue(schema, this);
+                    if (schema.isArray) {
+                        return me[name] = new DataValue(schema.itemSchema, this, name);
+                    }
+                    else {
+                        var schema_1 = this._$schema.define(name.toString());
+                        return me[name] = new DataValue(schema_1, this);
+                    }
                 }
             };
             DataValue.prototype.find = function (text, onProp) {

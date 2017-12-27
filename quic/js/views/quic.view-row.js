@@ -22,7 +22,7 @@ var Quic;
                 _this.opts = grid.opts;
                 _this.composite = grid;
                 _this.model = model;
-                _this.package = grid.package;
+                _this.quic = grid.quic;
                 _this.index = rowIndex;
                 _this.components = {};
                 var cols = grid.columns;

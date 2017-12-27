@@ -15,6 +15,6 @@
           "quic/ts"
       ],
     "exclude": [
-          "js","dev","quic/js","quic/achieves","quic/ts/views"
+          "js","dev","quic/js","quic/achieves"
     ]
  }

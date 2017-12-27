@@ -1,7 +1,7 @@
+/// <reference path="../views/quic.view.d.ts" />
 declare namespace Quic {
     namespace Packages {
-        interface IPackage {
-            idNo(): string;
+        interface IPackage extends IPromise {
             /**
              * 获取文本信息
              *
@@ -9,19 +9,32 @@ declare namespace Quic {
              * @param {boolean} [returnRequired]
              * @memberof IQuic
              */
-            _T(key: string, returnRequired?: boolean): string;
             /**
              * 字段定义
              *
              * @type {{[index:string]:any}}
              * @memberof IQuic
              */
-            fields: {
-                [index: string]: any;
-            };
+            field_config(setting: string, includes?: {
+                [index: string]: Views.ViewOpts;
+            }, excludes?: Array<string>): any;
         }
-        class Package {
+        class Package extends Promise {
+            fields: {
+                [index: string]: Views.ViewOpts;
+            };
+            field_settings: {
+                [index: string]: {
+                    [index: string]: Views.ViewOpts;
+                };
+            };
+            dynamic: boolean;
             constructor(opts: any);
+            field_config(setting: string, includes?: {
+                [index: string]: Views.ViewOpts;
+            }, excludes?: Array<string>): {
+                [index: string]: Views.ViewOpts;
+            };
         }
     }
 }

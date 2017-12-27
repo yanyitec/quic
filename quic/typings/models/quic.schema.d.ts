@@ -14,7 +14,7 @@ declare namespace Quic {
         interface IDataDefiner {
             define(name: string): IDataDefiner;
             find(expr: string, onProperty?: IOnProperty): IDataDefiner;
-            parse(expr: string, onProperty?: IOnProperty): DefineOpts;
+            parse(expr: string, onProperty?: IOnProperty): DefineOpts | IDataDefiner;
         }
         interface ISchema extends IDataDefiner {
             props: {

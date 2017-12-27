@@ -37,8 +37,8 @@ namespace Quic{
         
         constructor(async_func?:IPromiseAsync|IPromise){
             let resolve :(result?:any,invocationWay?:any)=>Promise= (result?:any,invocationWay?:any):Promise => {
-                this.resolve = this.reject = undefined;
-                if(result instanceof Promise){
+                this.resolve = this.reject = undefined;//&& invocationWay!=="quic:value"
+                if(result instanceof Promise && result!==this){
                     (result as IPromise).then((result:any,invocationWay:any)=>{
                         resolveResult(self,result,invocationWay);
                     },(reason,index_at)=>{
@@ -63,6 +63,7 @@ namespace Quic{
                         try{
                             (async_func as Function).call(this,resolve,reject);
                         }catch(ex){
+                            ctx.error(ex);
                             reject(ex);
                         }
                     });

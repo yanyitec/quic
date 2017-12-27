@@ -20,17 +20,17 @@ namespace Quic{
         export interface ModelOpts{
             url?:any;
             transport?:any;
-            data:any;
-            imports:{[index:string]:any};
+            data?:any;
+            imports?:{[index:string]:any};
             src_model?:IModel;
             schema?:ISchema;
         }
         export class Model extends DataValue implements IModel {
             $model_state:ModelState;
             //transport:TransportOpts;
-            constructor(opts:ModelOpts){
+            constructor(opts:ModelOpts,rootData?:any){
                 super(opts.schema,null);
-                this.$model_state = new ModelState(opts,this);          
+                this.$model_state = new ModelState(opts,rootData,this);          
             }
             fetch():IPromise{ return this.$model_state.fetch(); }
         }
@@ -42,18 +42,21 @@ namespace Quic{
             transport:TransportOpts;
             imports:Array<Function>;
             raw:any;
+            rootData:any;
             data:any;
             __fetchPromise:IPromise;
-            constructor(opts:ModelOpts,model:Model){
+            constructor(opts:ModelOpts,rootData:any,model:Model){
                 this.opts = opts;
                 this.model = model;
+                this.data = this.rootData = rootData;
                 if(opts.imports){
                     if(!opts.src_model) throw new Exception("model required",opts);
                     this.src_model = opts.src_model;   
                     this.imports=null;                 
                 }
-                if(opts.data){
+                if(opts.data || !opts.url || !opts.transport){
                     this.raw = opts.data;
+                    if(this.raw===undefined) this.raw = {};
                     this.fetch = ():IPromise=>{
                         if(this.__fetchPromise) return this.__fetchPromise;
                         return this.__fetchPromise = new Promise((resolve,reject)=>{
@@ -66,7 +69,7 @@ namespace Quic{
                 }
             }
             fetch():IPromise{
-                if(this.__fetchPromise===null){
+                if(this.__fetchPromise===undefined){
                     return this.__fetchPromise = new Promise((resolve,reject)=>{
                         let transOpts:TransportOpts = deepClone(this.transport);
                         transOpts.url = (this.model.parse(this.transport.url) as IModel).get_value();
@@ -84,9 +87,17 @@ namespace Quic{
             }
             _onDataArrived(raw:any,resolve,reject){
                 this.raw = raw;
-                let result = raw.length!==undefined && raw.push && raw.shift?[]:{};
+                let result ;
+                let isArr = raw.length!==undefined && raw.push && raw.shift;
+                if(this.rootData){
+                    result = this.rootData;
+                    if(isArr){
+                        result.length = raw.length;
+                    }
+                } 
+                //= raw.length!==undefined && raw.push && raw.shift?[]:{};
                 for(let i in raw) result[i]=raw[i];
-                this.model.set_value(result);
+                this.model.set_value(result,false);
                 if(this.imports===null){
                     this.imports=[];
                     for(let n in this.opts.imports){

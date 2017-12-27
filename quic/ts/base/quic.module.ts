@@ -57,7 +57,7 @@ namespace Quic{
             module = new Module(name);cached_modules[name] = module;
             let url :string =name;// makeUrl(name);
 
-            let res = loadScript(url).then((scriptExports:any)=>{
+            let res = ctx.loadScript(url).then((scriptExports:any)=>{
                 
                 if(scriptExports.__isdefine__){
                     (scriptExports as Promise).then((defineResults)=>{

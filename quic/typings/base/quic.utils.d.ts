@@ -2,9 +2,6 @@ declare namespace Quic {
     let opts: {
         "validation-message-prefix": string;
     };
-    class Exception extends Error {
-        constructor(message: string, ...args: Array<any>);
-    }
     function nextGNo(): number;
     let trim: (o: any) => string;
     let isArray: (o: any) => boolean;

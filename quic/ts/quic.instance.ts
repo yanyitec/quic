@@ -8,10 +8,12 @@ namespace Quic{
         $quic?:IQuicInstance;
         $model?:Models.IModel;
         $view?:Views.View;
-        initing?:(opts:QuicOpts,quic:QuicInstance)=>void;
+        initing?:(opts:QuicOpts,quic:IQuicInstance)=>void;
         created?:(model:Models.IModel,view:Views.View,quic:IQuicInstance)=>void;
+        binding?:(data:any,reason:string,quic:IQuicInstance)=>void;
     }
     export interface QuicOpts extends Models.ModelOpts {
+        element:HTMLElement;
         fields:any;
         includes:any;
         excludes:any;
@@ -20,7 +22,7 @@ namespace Quic{
         setting:string;
         controller:IController;
     }
-    export interface IQuicInstance{
+    export interface IQuicInstance extends IObservable,IController{
         _T(key:string):string;
         package:Packages.IPackage;
         opts:QuicOpts;
@@ -30,7 +32,7 @@ namespace Quic{
         element:HTMLElement;
         fields:{[index:string]:Views.ViewOpts};
     }
-    class QuicInstance implements IQuicInstance{
+    export class QuicInstance extends Promise implements IQuicInstance{
         package:Packages.IPackage;
         opts:QuicOpts;
         model:Models.IModel;
@@ -38,50 +40,86 @@ namespace Quic{
         controller:IController;
         element:HTMLElement;
         fields:{[index:string]:Views.ViewOpts};
+        subscribe:(name:string,lisenter:Function)=>any;
+        unsubscribe:(name:string,lisenter:Function)=>any;
+        notify:(name:string,evt?:any,applyInvo?:any,other?:any)=>any;
 
         constructor(opts:QuicOpts,pack:Packages.IPackage){
-           this.initialize(opts,pack);
+            super((resolve,reject)=>initialize(this,opts,pack,resolve,reject));
         }
-        initialize(opts:QuicOpts,pack:Packages.IPackage){
-            this.opts = opts;
-            this.package = pack || new Packages.Package(null);
-            this.fields = getIncludes(opts.setting||"detail",this.package,opts.includes,opts.fields);
-            let initted = false;
-            if(opts.controller){
-                if(typeof opts.controller ==="function"){
-                    this.controller = new (<any>opts.controller)(opts,this); 
-                    initted=true;
-                } 
-                else {
-                    this.controller = opts.controller ||{};
-                }
-            }
-            let controller :IController = this.controller;
-            this.controller.$quic = this;
-            if(initted && controller.initing) controller.initing(opts, this);
-
-            this.controller.$model = this.model = initModel(opts,controller);
-            let viewType :any= Views.viewTypes[opts.viewType||"form"];
-            if(!viewType) throw new Exception("Invalid view type",opts.viewType,opts);
-            this.controller.$view = this.view = new viewType({},null,this.model,this);
-            if(controller.created) controller.created(this.model,this.view,this);
-        }
+        
         
         _T(key:string):string{return key;}
-        
+    }
+    
+    let quicType :any = Quic;
+    for(let n in QuicInstance.prototype){
+        quicType.prototype[n] = QuicInstance.prototype[n];
+    }
+    for(let n in Observable.prototype){
+        quicType.prototype[n] = Observable.prototype[n];
     }
 
-    function getIncludes(setting:string,pack:Packages.IPackage,includes:any,fields:{[index:string]:Views.ViewOpts}){
-        return pack.field_config(setting,includes|| fields);
+    function initialize(instance:QuicInstance,opts:QuicOpts,pack:Packages.IPackage,resolve,reject){
+        instance.opts = opts;
+        instance.element = opts.element;
+        instance.package = pack || new Packages.Package(opts);
+        instance.package.done((pack)=>packageDone(instance,opts,resolve,reject));        
+    }
+    function packageDone(instance:QuicInstance,opts:QuicOpts,resolve,reject){
+        instance.fields = instance.package.field_config(opts.setting,opts.includes || opts.fields);
+        if(opts.controller){
+            if(typeof opts.controller ==="function"){
+                instance.controller = new (<any>opts.controller)(opts,instance); 
+                instance.controller.$quic = this;
+                if((<IController>instance).initing) (<IController>instance).initing(opts,instance);
+                instance.notify("initing",opts,instance);
+            } 
+            else {
+                instance.controller = opts.controller ||{};
+                instance.controller.$quic = this;
+                notify(instance,"initing",opts,instance);
+            }
+        }else {
+            instance.controller = {};
+        }
+        let controller :IController = instance.controller;
+
+        instance.controller.$model = instance.model = initModel(opts,controller);
+        let viewType :any= Views.viewTypes[opts.viewType||"form"];
+        if(!viewType) throw new Exception("Invalid view type",opts.viewType,opts);
+        instance.controller.$view = instance.view = new viewType(instance,null,instance.model,instance);
+        notify(instance,"created",instance.model,instance.view,instance);
+        instance.model.fetch().done((data)=>modelDone(data,instance,resolve,reject));
+    }
+    function modelDone(data:any,instance:QuicInstance,resolve,reject){
+        notify(instance,"binding",data,instance);
+        instance.model.set_value(data);
+        if(instance.element){
+            let viewElement = instance.view.render();
+            notify(instance,"rendering",viewElement,instance);
+            if(instance.element){
+                instance.element.innerHTML="";
+                instance.element.appendChild(viewElement);
+                notify(instance,"renderred",viewElement,instance);
+            }
+        }
+    }
+    function notify(instance:IQuicInstance,name:string,arg0?:any,arg1?:any,arg2?:any){
+        if((<any>instance)[name]) (<any>instance)[name].call(instance,arg0,arg1,arg2);
+        instance.notify(name,arg0,arg1,arg2);
+        if((<any>instance.controller)[name])(<any>instance.controller)[name].call(instance,arg0,arg1,arg2);
     }
     function initModel(modelOpts:Models.ModelOpts,modelData:any){
-        let model = new Models.Model(modelOpts);
+        let model = new Models.Model(modelOpts||{});
         for(let n in modelData){
             let member = modelData[n];
             configModel(model,n,member);
         }
         return model;
     }
+    
+    
 
     function configModel(model:Models.IDataValue,name:string,value:any){
         if(!/^[a-zA-Z]/g.test(name)) return;
@@ -106,7 +144,7 @@ namespace Quic{
             }
         }
     }
-
-
 }
+exports.Quic = Quic.QuicInstance;
+
 

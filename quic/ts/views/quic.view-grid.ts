@@ -1,10 +1,13 @@
 
+/// <reference path="quic.view.ts" />
+/// <reference path="../quic.instance.ts" />
+
 namespace Quic{
     export namespace Views{
         
         export interface GridViewOpts extends FormViewOpts{
-            rows:IValueChangeListener|string;
-            total:IValueChangeListener|string;
+            rows:any;
+            total:any;
             pagesize?:number;
         }
         export class GridView extends FormView{
@@ -12,14 +15,14 @@ namespace Quic{
             opts:GridViewOpts;
             __count:number;
             __elems:any;
-            constructor(opts:GridViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
-                super(opts,composite,model,pack);
+            constructor(opts:GridViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
+                super(opts,composite,model,quic);
                 
             }
-            init(opts:GridViewOpts,composite?:View,model?:Models.IModel,pack?:IPackage){
+            init(opts:GridViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 let fields = opts.fields;
                 opts.fields = null;
-                super.init(opts,composite,model,pack);
+                super.init(opts,composite,model,quic);
                 opts.fields= fields;
                 this.columns={};
                 for(let n in fields){
@@ -69,7 +72,7 @@ namespace Quic{
             
             refresh(){
                 let columns = this.columns;
-                let rows = this.model.data;
+                let rows ;//= this.model.data;
                 let html = '<div class="quic-tbody-frozen"><table><tbody></tbody></table></div>'
                 +'<div class="quic-tbody-scrollable"><table><tbody></tbody></table></div>';
                 let tbody = this.__elems.tbody;
@@ -80,7 +83,7 @@ namespace Quic{
                     let rowDsOpts = {
                         data:rows[i]
                     };
-                    let ds:IDataSource = new DataSource(rowDsOpts,this.exprFactory);
+                    let ds:any;// = new DataSource(rowDsOpts,this.exprFactory);
                     let rowView = new RowView(this,i,ds);
                     let row = rowView.render();
                     scrollableTBody.appendChild(row);
@@ -112,7 +115,7 @@ namespace Quic{
                     delete this.components[i];
                 } 
                 for(let i=0;i<count;i++){
-                    let ds : IDataSource ;
+                    let ds : any ;
                     if(i<this.__count){
                         this.components[i].dispose();
                     }

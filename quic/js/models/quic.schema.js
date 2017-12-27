@@ -1,7 +1,6 @@
 /// <reference path="../base/quic.utils.ts" />
 /// <reference path="../base/quic.observable.ts" />
 /// <reference path="quic.expression.ts" />
-/// <reference path="../quic.package.ts" />
 var Quic;
 (function (Quic) {
     var Models;

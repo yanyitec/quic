@@ -22,7 +22,6 @@ var Quic;
                 _this.opts = column.opts;
                 _this.composite = row;
                 _this.model = row.model;
-                _this.package = row.package;
                 return _this;
             }
             return CellView;

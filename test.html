@@ -4,44 +4,51 @@
         window.require =null;
         window.exports = {};
         </script>
-        <script type="text/javascript" src="quic/js/base/quic.test.js"></script>
+        <!--import global namespace-->
+        <script type="text/javascript" src="quic/js/quic.js"></script>
+
+        <!--import base-->
+        <script type="text/javascript" src="quic/js/base/quic.observable.js"></script>
         <script type="text/javascript" src="quic/js/base/quic.promise.js"></script>
-        <script type="text/javascript" src="quic/js/base/quic.access.js"></script>
-        <script type="text/javascript" src="quic/js/base/quic.expression.js"></script>
-        <script type="text/javascript" src="quic/js/tests/expression.js"></script>
+        <script type="text/javascript" src="quic/js/base/quic.test.js"></script>
+        <script type="text/javascript" src="quic/js/base/quic.transport.js"></script>
+        <script type="text/javascript" src="quic/js/base/quic.context.js"></script>
+        <script type="text/javascript" src="quic/js/base/quic.utils.js"></script>
+        
+        <!--import models-->
+        <script type="text/javascript" src="quic/js/models/quic.expression.js"></script>
+        <script type="text/javascript" src="quic/js/models/quic.schema.js"></script>
+        <script type="text/javascript" src="quic/js/models/quic.value.js"></script>
+        <script type="text/javascript" src="quic/js/models/quic.model.js"></script>
+
+        <!--import views-->
+        <script type="text/javascript" src="quic/js/views/quic.view.js"></script>
+        <script type="text/javascript" src="quic/js/views/quic.view-form.js"></script>
+
+        <!--import packages-->
+        <script type="text/javascript" src="quic/js/packages/quic.package.js"></script>
+
+        <!--import instance-->
+        <script type="text/javascript" src="quic/js/quic.instance.js"></script>
+
+
+        <script type="text/javascript1" src="quic/js/tests/expression.js"></script>
     </head>
     <body>
+        <div id="quic_area"></div>
         <script type="text/javascript">
-       
-       //let dataPathRegx = /(?:\[(?:\d+|first|last)\])?[a-zA-Z_\$][a-zA-Z0-9_\$]*(?:\[(?:\d+|first|last)\])*(?:.[a-zA-Z_\$][a-zA-Z0-9_\$]*(?:\[(?:\d+|first|last)\])*)/g;
-        var regex =/(?:\[(?:\d+|first|last)\])+/g;
-        regex =/(?:\[(?:\d+|first|last)\])+(?:.[a-zA-Z_\$][a-zA-Z0-9_\$]*)*/g;
-        regex =/(?:(?:\[(?:\d+|first|last)\])+.)(?:[a-zA-Z_\$][a-zA-Z0-9_\$]*(?:\[(?:\d+|first|last)\])*)*/g;
-        var arrSectionRegt = "(?:\\[(?:first|last|\\d+)\\])";
-        var propSectionRegt = "(?:[a-zA-Z_\\$][a-zA-Z0-9_\\$]*)";
-        var regt =   "\\$\\{(?:"+arrSectionRegt + "|" + propSectionRegt+")(?:"+arrSectionRegt + "|(?:." +propSectionRegt+"))*\\}";
-        regex = new RegExp(regt,"g");
-        var expr = "https://www.baidu.com?id=${prop[first][1].first[2][5].last}&name=${name}";
-        var match;i=0;
-        var arrSectionRegt = "(?:\\[(?:first|last|\\d+)\\])";
-        var propSectionRegt = "(?:[a-zA-Z_\\$][a-zA-Z0-9_\\$]*)";
-        var regt = "(?:" + arrSectionRegt + "|" + propSectionRegt + ")(?:" + arrSectionRegt + "|(?:." + propSectionRegt + "))*";
-        var regex = new RegExp(regt,"g");
-        var regex = /(?:[a-zA-Z_\$][a-zA-Z0-9_\$]*)/;
-        console.log(regex);console.log(propSectionRegt);
-        var expr = "{pro{p[first][1].first[2][5].last}&name=${name}";
-        alert(regex.exec(expr));
-        while(match = regex.exec(expr)){
-            console.log(i,match);
-            console.log(regex.lastIndex);
-            regex.lastIndex = match.index + match[0].length;
-            //regex.
-            if(++i==5) break;
-        }
-        //while(match = exprRegx.exec(expr)){
-        //    console.log(match);
-        //    if(++i>5)break;
-        //}
+        var opts = {
+            element : document.getElementById("quic_area"),
+            fields:{
+                "Id":{
+
+                },
+                "Name":{
+
+                }
+            }
+        };   
+        new Quic(opts);     
         </script>
         
     </body>

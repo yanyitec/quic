@@ -12,7 +12,6 @@ namespace Quic{
                 this.opts = column.opts;
                 this.composite = row;
                 this.model = row.model;
-                this.package = row.package;
             }        
         }
         View.viewTypes.row = RowView; 

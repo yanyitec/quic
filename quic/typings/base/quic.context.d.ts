@@ -1,4 +1,5 @@
 /// <reference path="quic.promise.d.ts" />
+/// <reference path="quic.transport.d.ts" />
 declare namespace Quic {
     /**
      * 环境容器的抽象
@@ -72,13 +73,7 @@ declare namespace Quic {
          * @memberof IContext
          */
         confirm(msg: string, title?: string): Promise;
-        /**
-         * 记录错误并扔出异常Error
-         *
-         * @type {Function}
-         * @memberof IContext
-         */
-        throw: Function;
+        info: Function;
         /**
          * 对控制台error的抽象
          *
@@ -148,13 +143,35 @@ declare namespace Quic {
          * 检查元素上是否具有某个css
          *
          * @param {HTMLElement} element 元素对象
-         * @param {string} css
+         * @param {string} css 要检测的css
+         * @returns {boolean} 是否存在
          * @memberof Dom
          */
         hasClass(element: HTMLElement, css: string): any;
-        show(element: HTMLElement): any;
-        hide(element: HTMLElement): any;
-        bas_url(): string;
+        /**
+         * 设置/获取某个元素的式样值
+         *
+         * @param {*} element 元素
+         * @param {string} name 式样名
+         * @param {string} [value] 式样值.undefined表示获取
+         * @returns {*} 获取时，返回式样值
+         * @memberof IContext
+         */
+        style(element: HTMLElement, name: string, value?: string): any;
+        /**
+         * 设置/获取某个元素的透明度值
+         *
+         * @param {HTMLElement} element
+         * @param {number} [value]
+         * @returns {*}
+         * @memberof IContext
+         */
+        opacity(element: HTMLElement, value?: number): any;
+        show(element: HTMLElement, animation?: boolean): any;
+        hide(element: HTMLElement, animation?: boolean): any;
+    }
+    class Exception extends Error {
+        constructor(message: string, ...args: Array<any>);
     }
     const ctx: IContext;
     const configs: {

@@ -33,7 +33,7 @@ declare namespace Quic {
          * @param {any} [applyInvocation] 是否用apply方式调用监听函数。js可以用call/apply两种方式调用函数，apply可以动态设定调用参数的个数，但运行速度比较慢。默认用call
          * @memberof IObservable
          */
-        notify(evtname: string, evtargs: any, applyInvocation?: any): any;
+        notify(evtname: string, evtargs: any, applyInvocation?: any, otherParam?: any): any;
     }
     class Observable implements IObservable {
         __event_handlers: any;
@@ -41,6 +41,7 @@ declare namespace Quic {
         constructor();
         subscribe(nameOrHandler: string | Function, handler?: Function): IObservable;
         unsubscribe(nameOrHandler: string | Function, handler?: Function): IObservable;
-        notify(name: string, evtArgs?: any, applyInvocation?: any): this;
+        notify(name: string, evtArgs?: any, applyInvocation?: any, otherParam?: any): this;
+        static applyTo(target: any): void;
     }
 }

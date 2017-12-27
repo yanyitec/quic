@@ -1,3 +1,5 @@
+/// <reference path="quic.view.ts" />
+/// <reference path="../quic.instance.ts" />
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -14,13 +16,13 @@ var Quic;
     (function (Views) {
         var GridView = /** @class */ (function (_super) {
             __extends(GridView, _super);
-            function GridView(opts, composite, model, pack) {
-                return _super.call(this, opts, composite, model, pack) || this;
+            function GridView(opts, composite, model, quic) {
+                return _super.call(this, opts, composite, model, quic) || this;
             }
-            GridView.prototype.init = function (opts, composite, model, pack) {
+            GridView.prototype.init = function (opts, composite, model, quic) {
                 var fields = opts.fields;
                 opts.fields = null;
-                _super.prototype.init.call(this, opts, composite, model, pack);
+                _super.prototype.init.call(this, opts, composite, model, quic);
                 opts.fields = fields;
                 this.columns = {};
                 for (var n in fields) {
@@ -65,7 +67,7 @@ var Quic;
             };
             GridView.prototype.refresh = function () {
                 var columns = this.columns;
-                var rows = this.model.data;
+                var rows; //= this.model.data;
                 var html = '<div class="quic-tbody-frozen"><table><tbody></tbody></table></div>'
                     + '<div class="quic-tbody-scrollable"><table><tbody></tbody></table></div>';
                 var tbody = this.__elems.tbody;
@@ -76,7 +78,7 @@ var Quic;
                     var rowDsOpts = {
                         data: rows[i]
                     };
-                    var ds = new DataSource(rowDsOpts, this.exprFactory);
+                    var ds = void 0; // = new DataSource(rowDsOpts,this.exprFactory);
                     var rowView = new Views.RowView(this, i, ds);
                     var row = rowView.render();
                     scrollableTBody.appendChild(row);

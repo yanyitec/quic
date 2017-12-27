@@ -11,24 +11,38 @@ var __extends = (this && this.__extends) || (function () {
 /// <reference path="../base/quic.observable.ts" />
 /// <reference path="../base/quic.context.ts" />
 /// <reference path="../models/quic.model.ts" />
-/// <reference path="../quic.package.ts" />
+/// <reference path="../quic.instance.ts" />
 var Quic;
 (function (Quic) {
     var Views;
     (function (Views) {
+        Views.viewOptsKeymembers = {
+            perm: true,
+            datapath: true,
+            text: true,
+            template: true,
+            css: true,
+            dataType: true,
+            viewType: true,
+            desciption: true,
+            position: true,
+            validations: true,
+            events: true
+        };
         var View = /** @class */ (function (_super) {
             __extends(View, _super);
-            function View(opts, composite, model, pack) {
+            function View(opts, composite, model, quic) {
                 var _this = _super.call(this) || this;
                 if (!opts)
                     return _this;
-                _this.init(opts, composite, model, pack);
+                _this.init(opts, composite, model, quic);
                 return _this;
             }
             View.prototype.id = function () {
-                var id = this.idprefix + (this.package ? this.package.idNo() : idNo());
-                this.id = function () { return id; };
-                return id;
+                //let id = this.idprefix + (this.package? this.package.idNo():idNo());
+                //this.id =()=>id;
+                //return id;
+                return null;
             };
             View.prototype.disabled = function (value) {
                 if (value === undefined) {
@@ -182,21 +196,19 @@ var Quic;
             };
             View.prototype.dispose = function () {
             };
-            View.prototype._T = function (key, returnRequired) {
-                return (this.package)
-                    ? this.package._T(key, returnRequired)
-                    : key;
+            View.prototype._T = function (key) {
+                return this.quic._T(key);
             };
-            View.prototype.init = function (opts, composite, model, pack) {
+            View.prototype.init = function (opts, composite, model, quic) {
                 this.opts = opts;
                 this.name = opts.name;
                 this.dataType = opts.dataType || "text";
                 this.viewType = opts.viewType || this.dataType;
                 this.validations = opts.validations;
                 this._permission = opts.perm;
-                this.text = opts.text || this._T(this.name);
+                this.text = opts.text || quic._T(this.name);
                 if (opts.desciption) {
-                    this.description = this._T(this.description);
+                    this.description = quic._T(this.description);
                 }
                 else
                     this.description = this.text;
@@ -216,11 +228,11 @@ var Quic;
                     css += " " + this.viewType;
                 css += " ";
                 this.css = css;
-                this.model = model || (composite ? composite.model : null);
+                this.model = model;
                 var dataPath = opts.datapath || this.name;
-                this.value = this.model.access(opts.datapath);
-                if (!(this.package = pack) && this.composite) {
-                    this.package = this.composite.package;
+                //this.value = this.model.access(opts.datapath);
+                if (!(this.quic = quic) && this.composite) {
+                    this.quic = this.composite.quic;
                 }
             };
             View.prototype.render_visibleonly = function (decoration) {
@@ -294,7 +306,7 @@ var Quic;
                 cloneView.css = src.css;
                 cloneView.description = src.description;
                 cloneView.idprefix = src.idprefix;
-                cloneView.package = src.package;
+                cloneView.quic = src.quic;
                 if (src.validations) {
                     var valids = {};
                     for (var validname in src.validations) {

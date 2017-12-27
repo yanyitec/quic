@@ -1,33 +1,8 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var Quic;
 (function (Quic) {
     Quic.opts = {
         "validation-message-prefix": "valid-"
     };
-    var Exception = /** @class */ (function (_super) {
-        __extends(Exception, _super);
-        function Exception(message) {
-            var args = [];
-            for (var _i = 1; _i < arguments.length; _i++) {
-                args[_i - 1] = arguments[_i];
-            }
-            var _this = _super.call(this, message) || this;
-            for (var i in args)
-                _this[i] = args[i];
-            return _this;
-        }
-        return Exception;
-    }(Error));
-    Quic.Exception = Exception;
     function nextGNo() {
         if (id_seed++ > 2100000000)
             id_seed = -2100000000;

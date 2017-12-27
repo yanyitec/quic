@@ -13,12 +13,12 @@ declare namespace Quic {
             components: {
                 [index: string]: View;
             };
-            constructor(opts: FormViewOpts, composite?: View, model?: Models.IModel, pack?: IPackage);
+            constructor(opts: FormViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance);
             permission(value?: string): any;
             render(decoration?: boolean): HTMLElement;
             protected render_visibleonly(decoration?: boolean): HTMLElement;
             protected render_writable(decoration?: boolean): HTMLElement;
-            protected init(opts: FormViewOpts, composite?: View, model?: Models.IModel, pack?: IPackage): void;
+            protected init(opts: FormViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance): void;
         }
     }
 }

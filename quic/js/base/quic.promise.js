@@ -20,8 +20,8 @@ var Quic;
         function Promise(async_func) {
             var _this = this;
             var resolve = function (result, invocationWay) {
-                _this.resolve = _this.reject = undefined;
-                if (result instanceof Promise) {
+                _this.resolve = _this.reject = undefined; //&& invocationWay!=="quic:value"
+                if (result instanceof Promise && result !== _this) {
                     result.then(function (result, invocationWay) {
                         resolveResult(self, result, invocationWay);
                     }, function (reason, index_at) {
@@ -48,6 +48,7 @@ var Quic;
                             async_func.call(_this, resolve, reject);
                         }
                         catch (ex) {
+                            Quic.ctx.error(ex);
                             reject(ex);
                         }
                     });

@@ -45,7 +45,7 @@ var Quic;
             }
             return this;
         };
-        Observable.prototype.notify = function (name, evtArgs, applyInvocation) {
+        Observable.prototype.notify = function (name, evtArgs, applyInvocation, otherParam) {
             var evts;
             var handlers;
             if (name) {
@@ -53,7 +53,7 @@ var Quic;
                     return this;
                 if (name === "quic:all") {
                     for (var evtname in evts) {
-                        this.notify(evtname, evtArgs, applyInvocation);
+                        this.notify(evtname, evtArgs, applyInvocation, otherParam);
                     }
                     return this;
                 }
@@ -75,10 +75,15 @@ var Quic;
                 for (var i = 0, j = handlers.length; i < j; i++) {
                     var h = handlers.shift();
                     handlers.push(h);
-                    h.call(this, evtArgs, applyInvocation);
+                    h.call(this, evtArgs, applyInvocation, otherParam);
                 }
             }
             return this;
+        };
+        Observable.applyTo = function (target) {
+            target.subscribe = Observable.prototype.subscribe;
+            target.unsubscribe = Observable.prototype.unsubscribe;
+            target.notify = Observable.prototype.notify;
         };
         return Observable;
     }());

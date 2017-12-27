@@ -1,7 +1,7 @@
 /// <reference path="../base/quic.observable.d.ts" />
 /// <reference path="../base/quic.context.d.ts" />
 /// <reference path="../models/quic.model.d.ts" />
-/// <reference path="../quic.package.d.ts" />
+/// <reference path="../quic.instance.d.ts" />
 declare namespace Quic {
     namespace Views {
         interface ViewOpts {
@@ -18,7 +18,23 @@ declare namespace Quic {
             validations?: {
                 [index: string]: any;
             };
+            events?: {
+                [index: string]: Function;
+            };
         }
+        let viewOptsKeymembers: {
+            perm: boolean;
+            datapath: boolean;
+            text: boolean;
+            template: boolean;
+            css: boolean;
+            dataType: boolean;
+            viewType: boolean;
+            desciption: boolean;
+            position: boolean;
+            validations: boolean;
+            events: boolean;
+        };
         interface ILocalizable {
         }
         class View extends Observable {
@@ -37,12 +53,12 @@ declare namespace Quic {
             composite: View;
             opts: ViewOpts;
             model: Models.IModel;
-            package: IPackage;
+            quic: IQuicInstance;
             protected _permission: string;
             protected _originPermission: string;
             protected _validatable?: boolean;
             protected _disabled?: Array<Node>;
-            constructor(opts: ViewOpts, composite?: View, model?: Models.IModel, pack?: IPackage);
+            constructor(opts: ViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance);
             id(): string;
             disabled(value?: boolean): boolean | this;
             permission(value?: string): any;
@@ -50,8 +66,8 @@ declare namespace Quic {
             render(decoration?: boolean): HTMLElement;
             value(val?: any): any;
             dispose(): void;
-            _T(key: string, returnRequired?: boolean): string;
-            protected init(opts: ViewOpts, composite?: View, model?: Models.IModel, pack?: IPackage): void;
+            _T(key: string): string;
+            protected init(opts: ViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance): void;
             protected render_visibleonly(decoration?: boolean): HTMLElement;
             protected render_writable(decoration?: boolean): HTMLElement;
             protected setPermissionCss(perm: string): View;

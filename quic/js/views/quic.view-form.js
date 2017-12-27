@@ -15,8 +15,10 @@ var Quic;
     (function (Views) {
         var FormView = /** @class */ (function (_super) {
             __extends(FormView, _super);
-            function FormView(opts, composite, model, pack) {
-                return _super.call(this, opts, composite, model, pack) || this;
+            function FormView(opts, composite, model, quic) {
+                var _this = _super.call(this, opts, composite, model, quic) || this;
+                _this.viewType = "form";
+                return _this;
             }
             FormView.prototype.permission = function (value) {
                 if (value === undefined) {
@@ -109,8 +111,8 @@ var Quic;
             FormView.prototype.render_writable = function (decoration) {
                 return this.render(decoration);
             };
-            FormView.prototype.init = function (opts, composite, model, pack) {
-                _super.prototype.init.call(this, opts, composite, model, pack);
+            FormView.prototype.init = function (opts, composite, model, quic) {
+                _super.prototype.init.call(this, opts, composite, model, quic);
                 this.components = {};
                 if (opts.fields) {
                     var compoments = this.components = {};
@@ -121,7 +123,7 @@ var Quic;
                         var ViewCls = Views.viewTypes[viewType] || Views.viewTypes[viewType = "text"];
                         child.viewType = viewType;
                         if (opts.name && opts.name != viewname) {
-                            Quic.ctx.throw("View name in opts is different from components");
+                            throw new Error("View name in opts is different from components");
                         }
                         compoments[viewname] = new Views.View(child, this);
                     }

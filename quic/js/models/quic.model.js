@@ -16,7 +16,6 @@ var __extends = (this && this.__extends) || (function () {
 /// <reference path="quic.schema.ts" />
 /// <reference path="quic.expression.ts" />
 /// <reference path="quic.value.ts" />
-/// <reference path="../quic.package.ts" />
 var Quic;
 (function (Quic) {
     var Models;
@@ -44,8 +43,10 @@ var Quic;
                     this.src_model = opts.src_model;
                     this.imports = null;
                 }
-                if (opts.data) {
+                if (opts.data || !opts.url || !opts.transport) {
                     this.raw = opts.data;
+                    if (this.raw === undefined)
+                        this.raw = {};
                     this.fetch = function () {
                         if (_this.__fetchPromise)
                             return _this.__fetchPromise;
@@ -57,7 +58,7 @@ var Quic;
             }
             ModelState.prototype.fetch = function () {
                 var _this = this;
-                if (this.__fetchPromise === null) {
+                if (this.__fetchPromise === undefined) {
                     return this.__fetchPromise = new Quic.Promise(function (resolve, reject) {
                         var transOpts = Quic.deepClone(_this.transport);
                         transOpts.url = _this.model.parse(_this.transport.url).get_value();

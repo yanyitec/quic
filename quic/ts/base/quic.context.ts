@@ -75,13 +75,7 @@ namespace Quic{
          * @memberof IContext
          */
         confirm(msg:string,title?:string):Promise;
-        /**
-         * 记录错误并扔出异常Error
-         * 
-         * @type {Function}
-         * @memberof IContext
-         */
-        throw:Function;
+        info:Function;
         /**
          * 对控制台error的抽象
          * 
@@ -193,6 +187,9 @@ namespace Quic{
     class BrowserContext{
         constructor(){
             this.ajax = transport;
+            this.warn = (...args)=>console.warn.apply(console,args);
+            this.error = (...args)=>console.error.apply(console,args);
+            this.info =  (...args)=>console.log.apply(console,args);
         }
         /**
          * 环境类型
@@ -341,7 +338,7 @@ namespace Quic{
          * @type {Function}
          * @memberof IContext
          */
-        throw:Function;
+        info:Function;
         /**
          * 对控制台error的抽象
          * 

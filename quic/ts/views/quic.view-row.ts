@@ -11,7 +11,7 @@ namespace Quic{
                 this.opts = grid.opts;
                 this.composite = grid;
                 this.model = model;
-                this.package = grid.package;
+                this.quic = grid.quic;
                 this.index = rowIndex;
                 this.components={};
                 let cols = grid.columns;
