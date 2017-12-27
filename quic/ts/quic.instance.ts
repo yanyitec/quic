@@ -11,11 +11,11 @@ namespace Quic{
         initing?:(opts:QuicOpts,quic:QuicInstance)=>void;
         created?:(model:Models.IModel,view:Views.View,quic:IQuicInstance)=>void;
     }
-    export interface QuicOpts extends IController{
+    export interface QuicOpts extends Models.ModelOpts {
         fields:any;
         includes:any;
         excludes:any;
-        modelOpts:any;
+        model:any;
         viewType:string;
         setting:string;
         controller:IController;
@@ -46,19 +46,27 @@ namespace Quic{
             this.opts = opts;
             this.package = pack || new Packages.Package(null);
             this.fields = getIncludes(opts.setting||"detail",this.package,opts.includes,opts.fields);
-            
-            if(opts.initing) opts.initing(opts, this);
-            this.controller = opts.controller||{};
+            let initted = false;
+            if(opts.controller){
+                if(typeof opts.controller ==="function"){
+                    this.controller = new (<any>opts.controller)(opts,this); 
+                    initted=true;
+                } 
+                else {
+                    this.controller = opts.controller ||{};
+                }
+            }
+            let controller :IController = this.controller;
             this.controller.$quic = this;
-            this.controller.$model = this.model = initModel(opts.modelOpts,opts);
+            if(initted && controller.initing) controller.initing(opts, this);
+
+            this.controller.$model = this.model = initModel(opts,controller);
             let viewType :any= Views.viewTypes[opts.viewType||"form"];
             if(!viewType) throw new Exception("Invalid view type",opts.viewType,opts);
             this.controller.$view = this.view = new viewType({},null,this.model,this);
-            if(opts.created) opts.created(this.model,this.view,this);
+            if(controller.created) controller.created(this.model,this.view,this);
         }
-        render(decoration?:boolean){
-            let element = this.
-        }
+        
         _T(key:string):string{return key;}
         
     }
