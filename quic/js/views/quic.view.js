@@ -8,6 +8,7 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+/// <reference path="../base/quic.utils.ts" />
 /// <reference path="../base/quic.observable.ts" />
 /// <reference path="../base/quic.context.ts" />
 /// <reference path="../models/quic.model.ts" />
@@ -39,10 +40,17 @@ var Quic;
                 return _this;
             }
             View.prototype.id = function () {
-                //let id = this.idprefix + (this.package? this.package.idNo():idNo());
-                //this.id =()=>id;
-                //return id;
-                return null;
+                var id = this.idprefix + Quic.GNo(this.idprefix);
+                this.id = function () { return id; };
+                return id;
+            };
+            View.prototype.value = function (value) {
+                if (value === undefined)
+                    return this.model.get_value();
+                if (value === "quic:undefined")
+                    this.model.set_value(undefined);
+                this.model.set_value(value);
+                return this;
             };
             View.prototype.disabled = function (value) {
                 if (value === undefined) {
@@ -159,7 +167,7 @@ var Quic;
             };
             View.prototype.render = function (decoration) {
                 var element = this.element = Quic.ctx.createElement("div");
-                var id = this.id + "_input";
+                var id = this.id() + "_input";
                 var perm = this.permission();
                 var inputElement;
                 if (perm === "visible") {
@@ -184,15 +192,12 @@ var Quic;
                     element.appendChild(inputElement);
                 }
                 else {
-                    var html = '<label for="' + id + "' class='quic-label'>" + this.text + '</label><span class="quic-control"></span><label for="' + id + '" class="quic-ins"></label>';
+                    var html = '<label for="' + id + '" class="quic-label">' + this.text + '</label><span class="quic-control"></span><label for="' + id + '" class="quic-ins"></label>';
                     element.innerHTML = html;
-                    element.lastChild.appendChild(inputElement);
+                    element.childNodes[1].appendChild(inputElement);
                 }
                 actualInput.id = id;
                 return element;
-            };
-            View.prototype.value = function (val) {
-                throw new Error("invalid operation");
             };
             View.prototype.dispose = function () {
             };
@@ -201,24 +206,22 @@ var Quic;
             };
             View.prototype.init = function (opts, composite, model, quic) {
                 this.opts = opts;
+                if (!(this.quic = quic) && composite) {
+                    this.quic = composite.quic;
+                }
                 this.name = opts.name;
                 this.dataType = opts.dataType || "text";
                 this.viewType = opts.viewType || this.dataType;
                 this.validations = opts.validations;
                 this._permission = opts.perm;
-                this.text = opts.text || quic._T(this.name);
-                if (opts.desciption) {
-                    this.description = quic._T(this.description);
-                }
-                else
-                    this.description = this.text;
-                this.composite = composite;
-                if (composite) {
+                if (this.composite = composite) {
                     this.idprefix = composite.idprefix + "_" + this.name;
                 }
                 else {
                     this.idprefix = this.name;
                 }
+                this.text = opts.text ? this.quic._T(opts.text) : this.quic._T(this.name);
+                this.description = opts.desciption ? quic._T(this.description) : "";
                 var css = "";
                 if (opts.css)
                     css = opts.css;
@@ -228,16 +231,25 @@ var Quic;
                     css += " " + this.viewType;
                 css += " ";
                 this.css = css;
-                this.model = model;
-                var dataPath = opts.datapath || this.name;
-                //this.value = this.model.access(opts.datapath);
-                if (!(this.quic = quic) && this.composite) {
-                    this.quic = this.composite.quic;
+                if (model) {
+                    this.model = model;
                 }
+                else {
+                    if (this.composite) {
+                        if (opts.datapath && this.composite) {
+                            this.model = this.composite.model.find(opts.datapath);
+                        }
+                        else {
+                            this.model = this.composite.model;
+                        }
+                    }
+                }
+                //this.value = this.model.access(opts.datapath);
             };
             View.prototype.render_visibleonly = function (decoration) {
                 var element = Quic.ctx.createElement("span");
-                element.innerHTML = this.value();
+                var value = this.value();
+                element.innerHTML = value === null || value === undefined ? "" : value;
                 element.title = this.description;
                 return element;
             };
@@ -248,7 +260,8 @@ var Quic;
                 element.name = this.name;
                 element.type = "text";
                 element.placeholder = this.description;
-                element.value = this.value();
+                var value = this.value();
+                element.value = value === null || value === undefined ? "" : value;
                 var tick;
                 var change = function () {
                     if (tick)
@@ -322,12 +335,6 @@ var Quic;
             return View;
         }(Quic.Observable));
         Views.View = View;
-        var idseed = 0;
-        function idNo() {
-            if (++idseed > 210000000)
-                idseed = 0;
-            return idseed;
-        }
         Views.viewTypes = View.viewTypes;
     })(Views = Quic.Views || (Quic.Views = {}));
 })(Quic || (Quic = {}));

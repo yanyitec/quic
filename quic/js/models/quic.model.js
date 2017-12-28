@@ -23,9 +23,9 @@ var Quic;
         var Model = /** @class */ (function (_super) {
             __extends(Model, _super);
             //transport:TransportOpts;
-            function Model(opts) {
+            function Model(opts, rootData) {
                 var _this = _super.call(this, opts.schema, null) || this;
-                _this.$model_state = new ModelState(opts, _this);
+                _this.$model_state = new ModelState(opts, rootData, _this);
                 return _this;
             }
             Model.prototype.fetch = function () { return this.$model_state.fetch(); };
@@ -33,10 +33,11 @@ var Quic;
         }(Models.DataValue));
         Models.Model = Model;
         var ModelState = /** @class */ (function () {
-            function ModelState(opts, model) {
+            function ModelState(opts, rootData, model) {
                 var _this = this;
                 this.opts = opts;
                 this.model = model;
+                this.data = this.rootData = rootData;
                 if (opts.imports) {
                     if (!opts.src_model)
                         throw new Quic.Exception("model required", opts);
@@ -77,10 +78,18 @@ var Quic;
             };
             ModelState.prototype._onDataArrived = function (raw, resolve, reject) {
                 this.raw = raw;
-                var result = raw.length !== undefined && raw.push && raw.shift ? [] : {};
+                var result;
+                var isArr = raw.length !== undefined && raw.push && raw.shift;
+                if (this.rootData) {
+                    result = this.rootData;
+                    if (isArr) {
+                        result.length = raw.length;
+                    }
+                }
+                //= raw.length!==undefined && raw.push && raw.shift?[]:{};
                 for (var i in raw)
                     result[i] = raw[i];
-                this.model.set_value(result);
+                this.model.set_value(result, false);
                 if (this.imports === null) {
                     this.imports = [];
                     for (var n in this.opts.imports) {

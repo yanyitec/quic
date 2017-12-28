@@ -4,6 +4,7 @@ namespace Quic{
         export interface FormViewOpts extends ViewOpts{
             fields?:{[index:string]:ViewOpts};
             title?:string;
+            commit_transport?:TransportOpts;
         }
         export class FormView extends View{
             private __disabled:Array<Node>;
@@ -80,7 +81,7 @@ namespace Quic{
                 for(let viewname in components){
                     let childview = components[viewname];
                     let childElement = childview.render();
-                    let position = childview.opts.position;
+                    let position = childview.opts.slot;
                     switch(position){
                         case "header":headAtions.appendChild(childElement);break;
                         case "status":status.appendChild(childElement); break;
@@ -90,6 +91,47 @@ namespace Quic{
                     }
                 }
                 return element;
+            }
+            validate(state?:any){
+                let hasError = false;
+                let result;
+                for(let n in this.components){
+                    if((result =this.components[n].validate(state))===false){
+                        hasError = true;
+                    }
+                }
+                return hasError?false:result;
+            }
+            waiting(block?:boolean){}
+            submit(url:string):Promise{
+                return new Promise((resolve,reject)=>{
+                    let state = {};
+                    if(this.validate(state)===false){
+                        ctx.validateInfo(state).done(()=>{
+                            reject(state,"validate");
+                        });
+                        return;
+                    }
+                    ctx.confirm(this._T("Do you want to submit?"),this._T("Confirm")).then((result)=>{
+                        if(result===false){
+                            reject(false,"cancel");
+                        } else {
+                            let value = this.value();
+                            let transOpts:TransportOpts = this.opts.commit_transport || {url:url};
+                            transOpts.url = url;
+                            if(!transOpts.method) transOpts.method = "POST";
+                            if(!transOpts.dataType) transOpts.dataType="json";
+                            if(!transOpts.type) transOpts.type = "json";
+                            transOpts.data = value;
+                            this.waiting(true);
+                            transport(transOpts).then(
+                                (data)=>{this.waiting(false);resolve(data);ctx.message(this._T("Submit successfully."));},
+                                (err,t)=>{ this.waiting(false);ctx.alert(this._T("Submit failed:" + err)); reject(err,"transport");}
+                            );
+                        }   
+                    });
+                });
+                
             }
             protected render_visibleonly(decoration?:boolean):HTMLElement{
                 return this.render(decoration);
@@ -106,6 +148,7 @@ namespace Quic{
                     let children = opts.fields;
                     for(let viewname in children){
                         let child :ViewOpts = children[viewname];
+                        if(!child.name) child.name = viewname;
                         let viewType = child.viewType || child.dataType || "text";
                         let ViewCls :any = viewTypes[viewType] || viewTypes[viewType = "text"];
                         child.viewType = viewType;

@@ -4,10 +4,19 @@ namespace Quic{
         "validation-message-prefix":"valid-"
     };
     
-    export function nextGNo():number{
-        if(id_seed++>2100000000) id_seed= -2100000000;
-        return id_seed;
+    export function GNo(category?:string):number{
+        if(category===undefined){
+            if(id_seed++>2100000000) id_seed= 10000;
+            return id_seed;
+        }else {
+            let id = id_seeds[category];
+            if(id===undefined || id===2100000000) id= 10000;
+            id_seeds[category]= id+1;
+            return id;
+        }
+        
     }
+    let id_seeds :{[index:string]:number}={};
     let id_seed:number = 10000;
 
     //export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
@@ -30,6 +39,20 @@ namespace Quic{
             if(o.nodeType!==undefined && o.appendChild && o.getAttribute) return "element";
         }
         return t;
+    }
+    export function str_replace(text:string,data:any){
+        if(!text || !data) return text;
+        return text.toString().replace(/\$\{([a-zA-Z0-9\$_.]+)\}/g,(match):string=>{
+            let path = match[1];
+            let lastAt =0;let at= 0;
+            while((at=path.indexOf(".",lastAt))>=0){
+                let p = path.substring(lastAt,at);
+                if(!(data= data[p])) return data;
+                lastAt = at;
+            }
+            let p = path.substring(lastAt);
+            return data[p];
+        });
     }
 
     

@@ -87,6 +87,7 @@ namespace Quic{
             }
             _onDataArrived(raw:any,resolve,reject){
                 this.raw = raw;
+                
                 let result ;
                 let isArr = raw.length!==undefined && raw.push && raw.shift;
                 if(this.rootData){

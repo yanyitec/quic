@@ -28,7 +28,7 @@ declare namespace Quic {
         }
         class Model extends DataValue implements IModel {
             $model_state: ModelState;
-            constructor(opts: ModelOpts);
+            constructor(opts: ModelOpts, rootData?: any);
             fetch(): IPromise;
         }
         class ModelState {
@@ -38,9 +38,10 @@ declare namespace Quic {
             transport: TransportOpts;
             imports: Array<Function>;
             raw: any;
+            rootData: any;
             data: any;
             __fetchPromise: IPromise;
-            constructor(opts: ModelOpts, model: Model);
+            constructor(opts: ModelOpts, rootData: any, model: Model);
             fetch(): IPromise;
             _onDataArrived(raw: any, resolve: any, reject: any): void;
         }

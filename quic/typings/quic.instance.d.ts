@@ -7,6 +7,7 @@ declare namespace Quic {
         $quic?: IQuicInstance;
         $model?: Models.IModel;
         $view?: Views.View;
+        $opts?: QuicOpts;
         initing?: (opts: QuicOpts, quic: IQuicInstance) => void;
         created?: (model: Models.IModel, view: Views.View, quic: IQuicInstance) => void;
         binding?: (data: any, reason: string, quic: IQuicInstance) => void;
@@ -22,7 +23,7 @@ declare namespace Quic {
         controller: IController;
     }
     interface IQuicInstance extends IObservable, IController {
-        _T(key: string): string;
+        _T(key: string, valueRequired?: boolean): string;
         package: Packages.IPackage;
         opts: QuicOpts;
         model: Models.IModel;
@@ -47,6 +48,6 @@ declare namespace Quic {
         unsubscribe: (name: string, lisenter: Function) => any;
         notify: (name: string, evt?: any, applyInvo?: any, other?: any) => any;
         constructor(opts: QuicOpts, pack: Packages.IPackage);
-        _T(key: string): string;
+        _T(key: string, valueRequired?: boolean): string;
     }
 }

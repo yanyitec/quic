@@ -1,3 +1,4 @@
+/// <reference path="../base/quic.utils.d.ts" />
 /// <reference path="../base/quic.observable.d.ts" />
 /// <reference path="../base/quic.context.d.ts" />
 /// <reference path="../models/quic.model.d.ts" />
@@ -14,7 +15,7 @@ declare namespace Quic {
             viewType?: string;
             name?: string;
             desciption?: string;
-            position?: string;
+            slot?: string;
             validations?: {
                 [index: string]: any;
             };
@@ -60,11 +61,11 @@ declare namespace Quic {
             protected _disabled?: Array<Node>;
             constructor(opts: ViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance);
             id(): string;
+            value(value?: any): any;
             disabled(value?: boolean): boolean | this;
             permission(value?: string): any;
             readonly(value?: boolean): any;
             render(decoration?: boolean): HTMLElement;
-            value(val?: any): any;
             dispose(): void;
             _T(key: string): string;
             protected init(opts: ViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance): void;

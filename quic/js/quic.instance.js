@@ -20,7 +20,7 @@ var Quic;
             var _this = _super.call(this, function (resolve, reject) { return initialize(_this, opts, pack, resolve, reject); }) || this;
             return _this;
         }
-        QuicInstance.prototype._T = function (key) { return key; };
+        QuicInstance.prototype._T = function (key, valueRequired) { return key; };
         return QuicInstance;
     }(Quic.Promise));
     Quic.QuicInstance = QuicInstance;
@@ -39,29 +39,26 @@ var Quic;
     }
     function packageDone(instance, opts, resolve, reject) {
         instance.fields = instance.package.field_config(opts.setting, opts.includes || opts.fields);
+        var controller;
         if (opts.controller) {
             if (typeof opts.controller === "function") {
-                instance.controller = new opts.controller(opts, instance);
-                instance.controller.$quic = this;
-                if (instance.initing)
-                    instance.initing(opts, instance);
-                instance.notify("initing", opts, instance);
+                controller = instance.controller = new opts.controller(opts, instance);
             }
             else {
-                instance.controller = opts.controller || {};
-                instance.controller.$quic = this;
-                notify(instance, "initing", opts, instance);
+                controller = instance.controller = opts.controller || {};
             }
         }
         else {
-            instance.controller = {};
+            controller = instance.controller = {};
         }
-        var controller = instance.controller;
-        instance.controller.$model = instance.model = initModel(opts, controller);
+        controller.$quic = this;
+        controller.$opts = opts;
+        notify(instance, "initing", opts, instance);
+        controller.$model = instance.model = initModel(opts, controller);
         var viewType = Quic.Views.viewTypes[opts.viewType || "form"];
         if (!viewType)
             throw new Quic.Exception("Invalid view type", opts.viewType, opts);
-        instance.controller.$view = instance.view = new viewType(instance, null, instance.model, instance);
+        controller.$view = instance.view = new viewType(instance, null, instance.model, instance);
         notify(instance, "created", instance.model, instance.view, instance);
         instance.model.fetch().done(function (data) { return modelDone(data, instance, resolve, reject); });
     }

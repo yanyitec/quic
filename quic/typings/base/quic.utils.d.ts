@@ -2,7 +2,7 @@ declare namespace Quic {
     let opts: {
         "validation-message-prefix": string;
     };
-    function nextGNo(): number;
+    function GNo(category?: string): number;
     let trim: (o: any) => string;
     let isArray: (o: any) => boolean;
     function isElement(node: any): any;

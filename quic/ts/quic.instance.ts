@@ -8,6 +8,7 @@ namespace Quic{
         $quic?:IQuicInstance;
         $model?:Models.IModel;
         $view?:Views.View;
+        $opts?:QuicOpts;
         initing?:(opts:QuicOpts,quic:IQuicInstance)=>void;
         created?:(model:Models.IModel,view:Views.View,quic:IQuicInstance)=>void;
         binding?:(data:any,reason:string,quic:IQuicInstance)=>void;
@@ -23,7 +24,7 @@ namespace Quic{
         controller:IController;
     }
     export interface IQuicInstance extends IObservable,IController{
-        _T(key:string):string;
+        _T(key:string,valueRequired?:boolean):string;
         package:Packages.IPackage;
         opts:QuicOpts;
         model:Models.IModel;
@@ -49,7 +50,7 @@ namespace Quic{
         }
         
         
-        _T(key:string):string{return key;}
+        _T(key:string,valueRequired?:boolean):string{return key;}
     }
     
     let quicType :any = Quic;
@@ -68,27 +69,27 @@ namespace Quic{
     }
     function packageDone(instance:QuicInstance,opts:QuicOpts,resolve,reject){
         instance.fields = instance.package.field_config(opts.setting,opts.includes || opts.fields);
+        let controller:IController;
         if(opts.controller){
             if(typeof opts.controller ==="function"){
-                instance.controller = new (<any>opts.controller)(opts,instance); 
-                instance.controller.$quic = this;
-                if((<IController>instance).initing) (<IController>instance).initing(opts,instance);
-                instance.notify("initing",opts,instance);
+                controller = instance.controller = new (<any>opts.controller)(opts,instance);                
             } 
             else {
-                instance.controller = opts.controller ||{};
-                instance.controller.$quic = this;
-                notify(instance,"initing",opts,instance);
+                controller = instance.controller = opts.controller ||{};
+                
             }
         }else {
-            instance.controller = {};
+            controller = instance.controller = {};
         }
-        let controller :IController = instance.controller;
+        controller.$quic = this;
+        controller.$opts = opts;
+        notify(instance,"initing",opts,instance);
 
-        instance.controller.$model = instance.model = initModel(opts,controller);
+
+        controller.$model = instance.model = initModel(opts,controller);
         let viewType :any= Views.viewTypes[opts.viewType||"form"];
         if(!viewType) throw new Exception("Invalid view type",opts.viewType,opts);
-        instance.controller.$view = instance.view = new viewType(instance,null,instance.model,instance);
+        controller.$view = instance.view = new viewType(instance,null,instance.model,instance);
         notify(instance,"created",instance.model,instance.view,instance);
         instance.model.fetch().done((data)=>modelDone(data,instance,resolve,reject));
     }

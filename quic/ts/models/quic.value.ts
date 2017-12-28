@@ -40,26 +40,13 @@ namespace Quic{
             __computes?:{[index:string]:DataValue};
             length?:number;
             constructor(schema:ISchema,superior:IDataValue,specialname ?:number|string){
-                if(!superior){
-                    let mockData = {};
-                    superior = {
-                        $super:undefined,
-                        $root:undefined,
-                        _$schema:undefined,
-                        subscribe:function(){return this;},
-                        unsubscibe:function(){return this;},
-                        notify:function(){return this;},
-                        get_value:function(){return mockData;},
-                        set_value :function(){throw new Error("invalid operation");},
-                        define:function(){throw new Error("invalid operation");},
-                        find:function(){throw new Error("invalid operation");},
-                        parse:function(){throw new Error("invalid operation");},
-                        delete:function(){return this;}
-                    };
-                    superior.$root = superior;
-                }
+                
                 if(this.$super = superior){
                     this.$root = superior.$root;
+                }else {
+                    this._$data={"$ROOT":{}};
+                    this.__name="$ROOT";
+                    this.$root = this;
                 }
                 if(schema!==null){
                     this._$schema = schema ||(schema= new Schema());

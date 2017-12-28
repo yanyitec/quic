@@ -86,7 +86,7 @@ var Quic;
                 for (var viewname in components) {
                     var childview = components[viewname];
                     var childElement = childview.render();
-                    var position = childview.opts.position;
+                    var position = childview.opts.slot;
                     switch (position) {
                         case "header":
                             headAtions.appendChild(childElement);
@@ -119,6 +119,8 @@ var Quic;
                     var children = opts.fields;
                     for (var viewname in children) {
                         var child = children[viewname];
+                        if (!child.name)
+                            child.name = viewname;
                         var viewType = child.viewType || child.dataType || "text";
                         var ViewCls = Views.viewTypes[viewType] || Views.viewTypes[viewType = "text"];
                         child.viewType = viewType;

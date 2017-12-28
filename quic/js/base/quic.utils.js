@@ -3,12 +3,22 @@ var Quic;
     Quic.opts = {
         "validation-message-prefix": "valid-"
     };
-    function nextGNo() {
-        if (id_seed++ > 2100000000)
-            id_seed = -2100000000;
-        return id_seed;
+    function GNo(category) {
+        if (category === undefined) {
+            if (id_seed++ > 2100000000)
+                id_seed = 10000;
+            return id_seed;
+        }
+        else {
+            var id = id_seeds[category];
+            if (id === undefined || id === 2100000000)
+                id = 10000;
+            id_seeds[category] = id + 1;
+            return id;
+        }
     }
-    Quic.nextGNo = nextGNo;
+    Quic.GNo = GNo;
+    var id_seeds = {};
     var id_seed = 10000;
     //export let arrRegx:RegExp =/(?:\[\d+\])+$/g;
     Quic.trim = function (o) { return o === null || o === undefined ? "" : o.toString().replace(/^(?:\s+)|(?:\s+$)/, ""); };

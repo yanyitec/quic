@@ -75,6 +75,8 @@ namespace Quic{
          * @memberof IContext
          */
         confirm(msg:string,title?:string):Promise;
+        message(msg:string,title?:string):Promise;
+        validateInfo(msg:any):Promise;
         info:Function;
         /**
          * 对控制台error的抽象
@@ -331,6 +333,34 @@ namespace Quic{
             return new Promise((resolve,reject)=>{
                 resolve(window.confirm(message));
             });
+        }
+        message(message:string,title?:string):IPromise{
+            return new Promise((resolve,reject)=>{
+                window.alert(message);
+                resolve(true);
+            });
+        }
+        validateInfo(state:any):Promise{
+            return new Promise((resolve,reject)=>{
+                let message = "";
+                for(let n in state){
+                    let err = state[n];
+                    message += err.text + ": " + err.message + "\n";
+                }
+                window.alert(message);
+                resolve(true);
+            });
+        }
+        validateInfo1(state:any):Promise{
+            let ul = ctx.createElement("ul");
+            for(let n in state){
+                let err = state[n];
+                let li = ctx.createElement("li");
+                li.innerHTML = "<label for='" + err.id + "'>" + err.text + "</label><span>" + err.message + "</span>";
+                ul.appendChild(li);
+                li.onclick = (e)=>{};
+            }
+            return null;
         }
         /**
          * 记录错误并扔出异常Error
