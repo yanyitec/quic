@@ -39,28 +39,29 @@ namespace Quic{
             
         }
 
+        
             
         export class View extends Observable{
-            name:string;
-            dataType:string;
-            viewType:string;
-            validations:{[index:string]:string};
-            text:string;
-            description:string;
-            decoration:boolean;
-            idprefix:string;
-            css:string;
-            width?:number;
-            element:HTMLElement;
-            composite:View;
-            opts:ViewOpts;
+            $name:string;
+            $dataType:string;
+            $viewType:string;
+            $validations:{[index:string]:string};
+            $text:string;
+            $description:string;
+            $decoration:boolean;
+            $idprefix:string;
+            $css:string;
+            $width?:number;
+            $element:HTMLElement;
+            $composite:View;
+            $opts:ViewOpts;
             
-            model:Models.IModel;
-            quic:IQuicInstance;
-            protected _permission:string;
-            protected _originPermission:string;
-            protected _validatable?:boolean;
-            protected _disabled?:Array<Node>;
+            $model:Models.IModel;
+            $quic:IQuicInstance;
+            protected __permission:string;
+            protected __originPermission:string;
+            protected __validatable?:boolean;
+            protected __disabled?:Array<Node>;
     
             constructor(opts:ViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 super();
@@ -68,32 +69,33 @@ namespace Quic{
                 this.init(opts,composite, model, quic);
             }
             
-            id():string{
-                let id = this.idprefix + GNo(this.idprefix);
-                this.id =()=>id;
+            get_viewid():string{
+                let id = this.$idprefix + GNo(this.$idprefix);
+                this.get_viewid =()=>id;
                 return id;
             }
+            get_value(){
+                return this.$model.get_value();
+            }
 
-            value(value?:any):any{
-                if(value===undefined) return this.model.get_value();
-                if(value==="quic:undefined") this.model.set_value(undefined);
-                this.model.set_value(value);
+            set_value(value?:any):any{
+                this.$model.set_value(value);
                 return this;
             }
 
             validate(state?:any){
-                if(!this._validatable || !this.validations)return true;
-                let value = this.value();
+                if(!this.__validatable || !this.$validations)return true;
+                let value = this.get_value();
                 let result:boolean;
-                let element = this.element;
+                let element = this.$element;
                 let tipElement = (element.lastChild || element) as HTMLElement;
-                for(let n in this.validations){
+                for(let n in this.$validations){
                     let validator = validators[n];
                     if(!validator){
                         ctx.warn("unregistered validation",n);
                         continue;
                     }
-                    let validation = this.validations[n];
+                    let validation = this.$validations[n];
                     result = validator(value,validation,this);
                     if(element){
                         if(result===false){
@@ -101,20 +103,20 @@ namespace Quic{
                             ctx.removeClass(element,"quic-validation-validating");
                             ctx.addClass(element,"quic-validation-error");
                             let tip = tipElement.title = str_replace(this._T("-valid-" + n),validation);
-                            if(state) state[this.name] = {
+                            if(state) state[this.$name] = {
                                 message:tip,
-                                name:this.name,
-                                id:this.id,
-                                text:this.text
+                                name:this.$name,
+                                id:this.get_viewid(),
+                                text:this.$text
                             };
                         }else if(result===null){
-                            ctx.addClass(element,"quic-validation-success");
-                            ctx.removeClass(element,"quic-validation-validating");
+                            ctx.removeClass(element,"quic-validation-success");
+                            ctx.addClass(element,"quic-validation-validating");
                             ctx.removeClass(element,"quic-validation-error");
                             tipElement.title = "";
                         }else{
-                            ctx.removeClass(element,"quic-validation-error");
-                            ctx.addClass(element,"quic-validation-validating");
+                            ctx.addClass(element,"quic-validation-error");
+                            ctx.removeClass(element,"quic-validation-validating");
                             ctx.removeClass(element,"quic-validation-success");
                             tipElement.title = "";
                         }
@@ -124,61 +126,60 @@ namespace Quic{
                 return result;
             }
     
-            disabled(value?:boolean){
-                if(value===undefined){return this._disabled!==undefined;} 
+            is_disabled(value?:boolean){
+                if(value===undefined){return this.__disabled!==undefined;} 
                 if(value===false){
-                    if(this._disabled){
-                        this.element.style.display="";
-                        for(let i =0,j= this._disabled.length;i<j;i++){
-                            this.element.appendChild(this._disabled[i]);
+                    if(this.__disabled){
+                        this.$element.style.display="";
+                        for(let i =0,j= this.__disabled.length;i<j;i++){
+                            this.$element.appendChild(this.__disabled[i]);
                         }
-                        this._disabled=undefined;
+                        this.__disabled=undefined;
                     }
                     return this;
                 }else {
-                    if(this._disabled) return this;
-                    this.element.style.display="none";
-                    this._disabled =[];
-                    for(let i =0 ,j=this.element.childNodes.length;i<j;i++){
-                        this._disabled.push(this.element.firstChild);
-                        this.element.removeChild(this.element.firstChild);
+                    if(this.__disabled) return this;
+                    this.$element.style.display="none";
+                    this.__disabled =[];
+                    for(let i =0 ,j=this.$element.childNodes.length;i<j;i++){
+                        this.__disabled.push(this.$element.firstChild);
+                        this.$element.removeChild(this.$element.firstChild);
                     }
                     return this;
                 }
             }
-    
-            permission(value?:string):any{
-                if(value===undefined) {
-                    if(this._permission===undefined){
-                        if(this.composite) this._permission = this._originPermission = (this.composite.permission() || "validatable") as string;
-                        else this._permission = this._originPermission ="validatable";
-                    }
-                    return this._permission;
+            get_permission(){
+                if(this.__permission===undefined){
+                    if(this.$composite) this.__permission = this.__originPermission = (this.$composite.get_permission() || "validatable") as string;
+                    else this.__permission = this.__originPermission ="validatable";
                 }
-                
-                if(this._permission!==value){
-                    let oldPerm = this._permission;
+                return this.__permission;
+            }
+    
+            set_permission(value?:string):any{                
+                if(this.__permission!==value){
+                    let oldPerm = this.__permission;
                     
-                    if(this.element){
+                    if(this.$element){
                         if(value==="quic:reset"){
-                            return this.permission(this._originPermission);
+                            return this.set_permission(this.__originPermission);
                         }
-                        this._permission = value;
+                        this.__permission = value;
                         
-                        let element:HTMLElement = (<any>this.element);
+                        let element:HTMLElement = (<any>this.$element);
                         if(value==="disabled"){
-                            return this.disabled(true);
+                            return this.is_disabled(true);
                         }else {
-                            this.disabled(false);
+                            this.is_disabled(false);
                         }
-                        let wrapper = (<any>this.element).quic_wrapFor.parentNode;
+                        let wrapper = (<any>this.$element).quic_wrapFor.parentNode;
                         
                         if(value==="visible"){
                             this.setPermissionCss("visible");
                             wrapper.innerHTML = "";
                             let inputElement = this.render_visibleonly();
                             wrapper.appendChild(inputElement);  
-                            this._validatable=false;
+                            this.__validatable=false;
                             return this;                   
                         }
                         if(oldPerm==="visible" || oldPerm==="disabled"){
@@ -187,53 +188,55 @@ namespace Quic{
                         }
                         if(value==="hidden"){
                             this.setPermissionCss("hidden");
-                            this._validatable=false;
+                            this.__validatable=false;
                         }else if(value==="readonly"){
                             this.setPermissionCss("readonly");
-                            this.readonly(true);
-                            this._validatable=false;
+                            this.is_readonly(true);
+                            this.__validatable=false;
                             element.style.display="";
                         }else if(value==="writable"){
                             this.setPermissionCss("writable");
-                            this.readonly(false);
-                            this._validatable = false;
+                            this.is_readonly(false);
+                            this.__validatable = false;
                             
                         }else if(value==="validatable"){
                             this.setPermissionCss("validatable");
-                            this._validatable = true;
+                            this.__validatable = true;
                         }
                     }else {
-                        this._permission = value==="quic:reset"?this._originPermission:value;
+                        this.__permission = value==="quic:reset"?this.__originPermission:value;
                     }
                 }
                 return this;
                 
             }
-            readonly(value?:boolean):any{
-                let perm = this.permission();
-                if(value===undefined) {
+            
+            is_readonly(value?:boolean):any{
+                let perm = this.get_permission();
+                if(value===undefined){
                     return perm==="visible" || perm==="readonly";
                 }
+                
                 if(perm==="disabled" || perm==="visible" || perm ==="readonly") return this;
-                if(this.element){
+                if(this.$element){
                     if(value===true){
-                        (<HTMLInputElement>(<any>this.element).quic_input).readOnly=true;
-                        this._validatable = false;
+                        (<HTMLInputElement>(<any>this.$element).quic_input).readOnly=true;
+                        this.__validatable = false;
                     }else {
-                        (<HTMLInputElement>(<any>this.element).quic_input).readOnly=false;
-                        (<HTMLInputElement>(<any>this.element).quic_input).removeAttribute("readonly");
-                        if(this._permission==="validatable") {this._validatable=true;}
+                        (<HTMLInputElement>(<any>this.$element).quic_input).readOnly=false;
+                        (<HTMLInputElement>(<any>this.$element).quic_input).removeAttribute("readonly");
+                        if(this.__permission==="validatable") {this.__validatable=true;}
                     }
                 }else {
-                    this._permission = "readonly";
+                    this.__permission = "readonly";
                 }
             }
             
             render(decoration?:boolean):HTMLElement{
-                let element = this.element = ctx.createElement("div");
-                let id = this.id() + "_input";
-                if(this.decoration!=undefined) decoration = this.decoration;
-                let perm:string = this.permission();
+                let element = this.$element = ctx.createElement("div");
+                let id = this.get_viewid() + "_input";
+                if(this.$decoration!=undefined) decoration = this.$decoration;
+                let perm:string = this.get_permission();
                 let inputElement :HTMLElement;
                 if(perm==="visible"){
                     inputElement = this.render_visibleonly(); 
@@ -246,17 +249,20 @@ namespace Quic{
                 (<any>inputElement).quic_wrapBy =  (<any>actualInput).quic_wrapBy=element;
                 (<any>inputElement).quic_view =  (<any>actualInput).quic_view =  (<any>actualInput).quic_view = this;
     
-                element.className = this.css += perm;
+                element.className = this.$css += perm;
                 if(perm==="readonly"){
-                    this.readonly(true);
+                    this.is_readonly(true);
                 }else if(perm==="validatable"){
-                    this._validatable=true;
+                    this.__validatable=true;
                 }
     
                 if(decoration===false){
                     element.appendChild(inputElement);
                 }else {
-                    let html  = '<label for="' + id + '" class="quic-label">' + this.text + '</label><span class="quic-control"></span><label for="'+id+'" class="quic-ins"></label>' ;
+                    let required = this.$validations && this.$validations.required;
+                    let html  = '<label for="' + id + '" class="quic-label">' + this.$text 
+                    + (required?"<span class='required'>*</span>":"")
+                    + '</label><span class="quic-control"></span><label for="'+id+'" class="quic-ins"></label>' ;
                     element.innerHTML = html;
                     element.childNodes[1].appendChild(inputElement);
                 }
@@ -268,44 +274,44 @@ namespace Quic{
     
             }
             _T(key:string):string{
-                return this.quic._T(key);
+                return this.$quic._T(key);
             }
             protected init(opts:ViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
-                this.opts = opts;
-                if(!(this.quic = quic) && composite) {
-                    this.quic = composite.quic;
+                this.$opts = opts;
+                if(!(this.$quic = quic) && composite) {
+                    this.$quic = composite.$quic;
                 }
-                this.name = opts.name;
-                this.dataType = opts.dataType || "text";
-                this.viewType = opts.viewType || this.dataType;
-                this.validations = opts.validations;
-                this.decoration = opts.decoration;
-                this._permission = opts.perm;
-                if(this.composite = composite){
-                    this.idprefix = composite.idprefix + "_" + this.name;
+                this.$name = opts.name;
+                this.$dataType = opts.dataType || "text";
+                this.$viewType = opts.viewType || this.$dataType;
+                this.$validations = opts.validations;
+                this.$decoration = opts.decoration;
+                this.__permission = opts.perm;
+                if(this.$composite = composite){
+                    this.$idprefix = composite.$idprefix + "_" + this.$name;
                 }else {
-                    this.idprefix = this.name;
+                    this.$idprefix = this.$name;
                 }
 
-                this.text = opts.text?this.quic._T(opts.text) : this.quic._T(this.name);
-                this.description = opts.desciption ?quic._T(this.description):"";
+                this.$text = opts.text?this.$quic._T(opts.text) : this.$quic._T(this.$name);
+                this.$description = opts.desciption ?quic._T(this.$description):"";
                     
                 
                 let css:string = "";
                 if(opts.css) css = opts.css;
-                css += " " + this.name ;
-                css += " " + this.dataType ;
-                if(this.dataType!= this.viewType) css += " " + this.viewType;
+                css += " " + this.$name ;
+                css += " " + this.$dataType ;
+                if(this.$dataType!= this.$viewType) css += " " + this.$viewType;
                 css += " ";
-                this.css = css;
+                this.$css = css;
                 if(model){
-                    this.model = model ;
+                    this.$model = model ;
                 }else {
-                    if(this.composite){
-                        if(opts.datapath && this.composite){
-                            this.model = this.composite.model.find(opts.datapath) as Models.IModel;
+                    if(this.$composite){
+                        if(opts.datapath && this.$composite){
+                            this.$model = this.$composite.$model.find(opts.datapath) as Models.IModel;
                         }else {
-                            this.model = this.composite.model;
+                            this.$model = this.$composite.$model;
                         }
                     }
                     
@@ -316,24 +322,24 @@ namespace Quic{
     
             protected render_visibleonly(decoration?:boolean):HTMLElement{
                 let element = ctx.createElement("span");
-                let value = this.value();
+                let value = this.get_value();
                 element.innerHTML = value===null || value===undefined?"":value;
-                element.title = this.description;
+                element.title = this.$description;
                 return element;
             }
             
             protected render_writable(decoration?:boolean):HTMLElement{
-                let element:HTMLInputElement = this.element = ctx.createElement("input") as HTMLInputElement;
+                let element:HTMLInputElement = ctx.createElement("input") as HTMLInputElement;
                 (<any>element)["quic-view"] = this;
-                element.name = this.name;
+                element.name = this.$name;
                 element.type = "text";
-                element.placeholder = this.description;
-                let value = this.value();
+                element.placeholder = this.$description;
+                let value = this.get_value();
                 element.value =  value===null || value===undefined?"":value;
                 let tick:number;
                 let change = ()=>{
                     if(tick) clearTimeout(tick);
-                    this.value(element.value);
+                    this.set_value(element.value);
                     this.validate();
                 };
                 let delayChange =()=>{
@@ -348,14 +354,14 @@ namespace Quic{
     
             protected setPermissionCss(perm:string):View{
                 if(perm==="disabled" || perm==="hidden"){
-                    this.element.style.display="none";
+                    this.$element.style.display="none";
                     return this;
                 }else {
-                    this.element.style.display = "block";
+                    this.$element.style.display = "block";
                 }
-                let css = this.element.className;
+                let css = this.$element.className;
                 if(!css) {
-                    this.element.className = perm;
+                    this.$element.className = perm;
                 }
                 let csses = css.split(" ");
                 let cssText = "";
@@ -366,44 +372,22 @@ namespace Quic{
                     }
                     cssText += " " + c;
                 }
-                this.element.className = cssText + " " + perm;
+                this.$element.className = cssText + " " + perm;
                 return this;
             }
     
-            static clone(src:View,cloneView:View,composite?:View,model?:Models.IModel):View{
-                
-                if(!cloneView) {
-                    let CLS:any = viewTypes[src.viewType];
-                    if(!CLS) throw new Error("invalid viewType");
-                    cloneView= new CLS(null) as View;
-                }
-                cloneView.name = src.name;
-                cloneView.dataType = src.dataType;
-                cloneView.viewType = src.viewType;
-                cloneView.value = src.value;
-                cloneView.text = src.text;
-                cloneView.css = src.css;
-                cloneView.description = src.description;
-                cloneView.idprefix = src.idprefix;
-                cloneView.quic = src.quic;
-                if(src.validations){
-                    let valids ={};
-                    for(let validname in src.validations){
-                        valids[validname] = src.validations[validname];
-                    }
-                    cloneView.validations = valids;
-                }
-                cloneView.composite = composite;
-                cloneView.model = model;
-                return cloneView;
-            }
-    
+            
             static viewTypes:{[index:string]:any}={"view":View};
             static validators:{[index:string]:any}={};
         }
 
         export let viewTypes:{[index:string]:any}=View.viewTypes;
-        export let validators:{[index:string]:any}=View.viewTypes;
+        viewTypes.text = View;
+        export let validators:{[index:string]:any}=View.validators;
+        validators.required = (value:any,validation:any,view:View):boolean=>{
+            let val = typeof value == "string"? value.replace(/(^\s+)|(\s+$)/g,""):value;
+            if(val)return true;else return false;
+        }
     }
 }
 exports.View = Quic.Views.View;

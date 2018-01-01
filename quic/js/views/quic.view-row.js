@@ -19,25 +19,26 @@ var Quic;
             __extends(RowView, _super);
             function RowView(grid, rowIndex, model) {
                 var _this = _super.call(this, null) || this;
-                _this.opts = grid.opts;
-                _this.composite = grid;
-                _this.model = model;
-                _this.quic = grid.quic;
+                _this.$opts = grid.$opts;
+                _this.$composite = grid;
+                _this.$model = model;
+                _this.$quic = grid.$quic;
                 _this.index = rowIndex;
-                _this.components = {};
-                var cols = grid.columns;
+                _this.$components = _this.cells = {};
+                var cols = grid.$columns;
+                var me = _this;
                 for (var n in cols) {
                     var col = cols[n];
                     var view = new Views.CellView(col, _this);
-                    Views.View.clone(col, view, grid);
+                    //View.clone(col,view,grid);
                     view.column = col;
-                    _this.components[n] = view;
-                    col.components[rowIndex] = view;
+                    me[n] = _this.$components[n] = view;
+                    col.$components[rowIndex] = view;
                 }
                 return _this;
             }
             RowView.prototype.render = function () {
-                return RowView.renderCells(this.components, "td");
+                return RowView.renderCells(this.$components, "td");
             };
             RowView.prototype.dispose = function () {
                 //this.datasource.dispose();
@@ -51,7 +52,10 @@ var Quic;
                     var cellView = fields[n];
                     var td = Quic.ctx.createElement(tagName);
                     td.appendChild(cellView.render(false));
-                    if (cellView.frozen || cellView.column.frozen) {
+                    var isFrozen = cellView.frozen;
+                    if (isFrozen === undefined && cellView.column)
+                        isFrozen = cellView.column.frozen;
+                    if (isFrozen) {
                         frozenRow.appendChild(td);
                     }
                     else {

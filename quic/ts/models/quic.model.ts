@@ -10,7 +10,6 @@
 namespace Quic{
     export namespace Models{
         export interface IModel extends IDataValue{
-            $model_state:ModelState;
             fetch():IPromise;
         }
         export interface IModelAccess{
@@ -25,43 +24,34 @@ namespace Quic{
             src_model?:IModel;
             schema?:ISchema;
         }
-        export class Model extends DataValue implements IModel {
-            $model_state:ModelState;
-            //transport:TransportOpts;
+        
+
+        export class Model extends DataValue implements IModel{
+            $opts:ModelOpts;
+            $src_model:IModel;
+            $transport:TransportOpts;
+            $imports:Array<Function>;
+            $raw:any;
+            $rootData:any;
+            $data:any;
+            __fetchPromise:IPromise;
             constructor(opts:ModelOpts,rootData?:any){
                 super(opts.schema,null);
-                this.$model_state = new ModelState(opts,rootData,this);          
-            }
-            fetch():IPromise{ return this.$model_state.fetch(); }
-        }
-
-        export class ModelState{
-            opts:ModelOpts;
-            model:Model;
-            src_model:IModel;
-            transport:TransportOpts;
-            imports:Array<Function>;
-            raw:any;
-            rootData:any;
-            data:any;
-            __fetchPromise:IPromise;
-            constructor(opts:ModelOpts,rootData:any,model:Model){
-                this.opts = opts;
-                this.model = model;
-                this.data = this.rootData = rootData;
+                this.$opts = opts;
+                this.$data = this.$rootData = rootData;
                 if(opts.imports){
                     if(!opts.src_model) throw new Exception("model required",opts);
-                    this.src_model = opts.src_model;   
-                    this.imports=null;                 
+                    this.$src_model = opts.src_model;   
+                    this.$imports=null;                 
                 }
                 if(opts.data || !opts.url || !opts.transport){
-                    this.raw = opts.data;
-                    if(this.raw===undefined) this.raw = {};
+                    this.$raw = opts.data;
+                    if(this.$raw===undefined) this.$raw = {};
                     this.fetch = ():IPromise=>{
                         if(this.__fetchPromise) return this.__fetchPromise;
                         return this.__fetchPromise = new Promise((resolve,reject)=>{
                             
-                            this._onDataArrived(this.raw,resolve,reject);
+                            this.__onDataArrived(this.$raw,resolve,reject);
                             
                             
                         });
@@ -71,11 +61,11 @@ namespace Quic{
             fetch():IPromise{
                 if(this.__fetchPromise===undefined){
                     return this.__fetchPromise = new Promise((resolve,reject)=>{
-                        let transOpts:TransportOpts = deepClone(this.transport);
-                        transOpts.url = (this.model.parse(this.transport.url) as IModel).get_value();
+                        let transOpts:TransportOpts = deepClone(this.$transport);
+                        transOpts.url = (this.parse(this.$transport.url) as IModel).get_value();
                         //this.notify("onfetching",transOpts);
                         Quic.transport(transOpts).then((result)=>{
-                            this._onDataArrived(result,resolve,reject);                            
+                            this.__onDataArrived(result,resolve,reject);                            
                         },(err,at)=>{
                             ctx.error("ajax request is failed",transOpts,err,at);
                             reject(err,at);
@@ -85,27 +75,27 @@ namespace Quic{
                     return this.__fetchPromise;
                 }
             }
-            _onDataArrived(raw:any,resolve,reject){
-                this.raw = raw;
-                
+            __onDataArrived(raw:any,resolve,reject){
+                this.$raw = raw;
+
                 let result ;
                 let isArr = raw.length!==undefined && raw.push && raw.shift;
-                if(this.rootData){
-                    result = this.rootData;
+                if(this.$rootData){
+                    result = this.$rootData;
                     if(isArr){
                         result.length = raw.length;
                     }
                 } 
                 //= raw.length!==undefined && raw.push && raw.shift?[]:{};
                 for(let i in raw) result[i]=raw[i];
-                this.model.set_value(result,false);
-                if(this.imports===null){
-                    this.imports=[];
-                    for(let n in this.opts.imports){
-                        this.imports.push(imports(this.model,this.src_model,n,this.opts.imports[n]));
+                this.set_value(result,false);
+                if(this.$imports===null){
+                    this.$imports=[];
+                    for(let n in this.$opts.imports){
+                        this.$imports.push(imports(this,this.$src_model,n,this.$opts.imports[n]));
                     }
-                }else if(this.imports){
-                    for(let n in this.imports) this.imports[n]();
+                }else if(this.$imports){
+                    for(let n in this.$imports) this.$imports[n]();
                 }
                 this.__fetchPromise=undefined;
                 resolve(result);

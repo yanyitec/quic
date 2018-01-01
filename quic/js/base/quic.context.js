@@ -201,6 +201,34 @@ var Quic;
                 resolve(window.confirm(message));
             });
         };
+        BrowserContext.prototype.message = function (message, title) {
+            return new Quic.Promise(function (resolve, reject) {
+                window.alert(message);
+                resolve(true);
+            });
+        };
+        BrowserContext.prototype.validateInfo = function (state) {
+            return new Quic.Promise(function (resolve, reject) {
+                var message = "";
+                for (var n in state) {
+                    var err = state[n];
+                    message += err.text + ": " + err.message + "\n";
+                }
+                window.alert(message);
+                resolve(true);
+            });
+        };
+        BrowserContext.prototype.validateInfo1 = function (state) {
+            var ul = Quic.ctx.createElement("ul");
+            for (var n in state) {
+                var err = state[n];
+                var li = Quic.ctx.createElement("li");
+                li.innerHTML = "<label for='" + err.id + "'>" + err.text + "</label><span>" + err.message + "</span>";
+                ul.appendChild(li);
+                li.onclick = function (e) { };
+            }
+            return null;
+        };
         /**
          * 创建Dom元素
          *

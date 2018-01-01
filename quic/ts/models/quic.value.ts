@@ -184,7 +184,7 @@ namespace Quic{
                 this._$schema.find(text,(propname,schema)=>{
                     let prop :DataValue = dataValue[propname];
                     if(!prop) {
-                        dataValue[propname] = new DataValue(schema.itemSchema||schema,this);
+                        prop = dataValue[propname] = new DataValue(schema.itemSchema||schema,this);
                     }
                     dataValue = prop;
                     

@@ -21,14 +21,6 @@ var Quic;
             var url = makeUrl(method, opts.url, opts.data);
             var data = makeData(method, type, opts.data);
             var xhr = new XMLHttpRequest();
-            var contentType = contentTypes[type];
-            if (contentType)
-                xhr.setRequestHeader("Content-Type", contentType);
-            var headers = opts.headers;
-            if (headers) {
-                for (var n in headers)
-                    xhr.setRequestHeader(n, headers[n]);
-            }
             _this = _super.call(this, function (resolve, reject) {
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
@@ -36,6 +28,14 @@ var Quic;
                     }
                 };
                 xhr.open(method, url, opts.sync);
+                var contentType = contentTypes[type];
+                if (contentType)
+                    xhr.setRequestHeader("Content-Type", contentType);
+                var headers = opts.headers;
+                if (headers) {
+                    for (var n in headers)
+                        xhr.setRequestHeader(n, headers[n]);
+                }
                 xhr.send(data);
             }) || this;
             _this.opts = opts;

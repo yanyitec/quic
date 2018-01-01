@@ -9,9 +9,9 @@ namespace Quic{
             rowIndex:number;
             constructor(column:ColumnView ,row?:RowView){
                 super(null);
-                this.opts = column.opts;
-                this.composite = row;
-                this.model = row.model;
+                this.$opts = column.$opts;
+                this.$composite = row;
+                this.$model = row.$model;
             }        
         }
         View.viewTypes.row = RowView; 

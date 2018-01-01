@@ -15,6 +15,7 @@ declare namespace Quic {
             viewType?: string;
             name?: string;
             desciption?: string;
+            decoration?: boolean;
             slot?: string;
             validations?: {
                 [index: string]: any;
@@ -32,6 +33,7 @@ declare namespace Quic {
             dataType: boolean;
             viewType: boolean;
             desciption: boolean;
+            decoration: boolean;
             position: boolean;
             validations: boolean;
             events: boolean;
@@ -39,32 +41,36 @@ declare namespace Quic {
         interface ILocalizable {
         }
         class View extends Observable {
-            name: string;
-            dataType: string;
-            viewType: string;
-            validations: {
+            $name: string;
+            $dataType: string;
+            $viewType: string;
+            $validations: {
                 [index: string]: string;
             };
-            text: string;
-            description: string;
-            idprefix: string;
-            css: string;
-            width?: number;
-            element: HTMLElement;
-            composite: View;
-            opts: ViewOpts;
-            model: Models.IModel;
-            quic: IQuicInstance;
-            protected _permission: string;
-            protected _originPermission: string;
-            protected _validatable?: boolean;
-            protected _disabled?: Array<Node>;
+            $text: string;
+            $description: string;
+            $decoration: boolean;
+            $idprefix: string;
+            $css: string;
+            $width?: number;
+            $element: HTMLElement;
+            $composite: View;
+            $opts: ViewOpts;
+            $model: Models.IModel;
+            $quic: IQuicInstance;
+            protected __permission: string;
+            protected __originPermission: string;
+            protected __validatable?: boolean;
+            protected __disabled?: Array<Node>;
             constructor(opts: ViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance);
-            id(): string;
-            value(value?: any): any;
-            disabled(value?: boolean): boolean | this;
-            permission(value?: string): any;
-            readonly(value?: boolean): any;
+            get_viewid(): string;
+            get_value(): any;
+            set_value(value?: any): any;
+            validate(state?: any): boolean;
+            is_disabled(value?: boolean): boolean | this;
+            get_permission(): string;
+            set_permission(value?: string): any;
+            is_readonly(value?: boolean): any;
             render(decoration?: boolean): HTMLElement;
             dispose(): void;
             _T(key: string): string;
@@ -72,12 +78,17 @@ declare namespace Quic {
             protected render_visibleonly(decoration?: boolean): HTMLElement;
             protected render_writable(decoration?: boolean): HTMLElement;
             protected setPermissionCss(perm: string): View;
-            static clone(src: View, cloneView: View, composite?: View, model?: Models.IModel): View;
             static viewTypes: {
+                [index: string]: any;
+            };
+            static validators: {
                 [index: string]: any;
             };
         }
         let viewTypes: {
+            [index: string]: any;
+        };
+        let validators: {
             [index: string]: any;
         };
     }

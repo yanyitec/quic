@@ -22,50 +22,39 @@ var Quic;
     (function (Models) {
         var Model = /** @class */ (function (_super) {
             __extends(Model, _super);
-            //transport:TransportOpts;
             function Model(opts, rootData) {
                 var _this = _super.call(this, opts.schema, null) || this;
-                _this.$model_state = new ModelState(opts, rootData, _this);
-                return _this;
-            }
-            Model.prototype.fetch = function () { return this.$model_state.fetch(); };
-            return Model;
-        }(Models.DataValue));
-        Models.Model = Model;
-        var ModelState = /** @class */ (function () {
-            function ModelState(opts, rootData, model) {
-                var _this = this;
-                this.opts = opts;
-                this.model = model;
-                this.data = this.rootData = rootData;
+                _this.$opts = opts;
+                _this.$data = _this.$rootData = rootData;
                 if (opts.imports) {
                     if (!opts.src_model)
                         throw new Quic.Exception("model required", opts);
-                    this.src_model = opts.src_model;
-                    this.imports = null;
+                    _this.$src_model = opts.src_model;
+                    _this.$imports = null;
                 }
                 if (opts.data || !opts.url || !opts.transport) {
-                    this.raw = opts.data;
-                    if (this.raw === undefined)
-                        this.raw = {};
-                    this.fetch = function () {
+                    _this.$raw = opts.data;
+                    if (_this.$raw === undefined)
+                        _this.$raw = {};
+                    _this.fetch = function () {
                         if (_this.__fetchPromise)
                             return _this.__fetchPromise;
                         return _this.__fetchPromise = new Quic.Promise(function (resolve, reject) {
-                            _this._onDataArrived(_this.raw, resolve, reject);
+                            _this.__onDataArrived(_this.$raw, resolve, reject);
                         });
                     };
                 }
+                return _this;
             }
-            ModelState.prototype.fetch = function () {
+            Model.prototype.fetch = function () {
                 var _this = this;
                 if (this.__fetchPromise === undefined) {
                     return this.__fetchPromise = new Quic.Promise(function (resolve, reject) {
-                        var transOpts = Quic.deepClone(_this.transport);
-                        transOpts.url = _this.model.parse(_this.transport.url).get_value();
+                        var transOpts = Quic.deepClone(_this.$transport);
+                        transOpts.url = _this.parse(_this.$transport.url).get_value();
                         //this.notify("onfetching",transOpts);
                         Quic.transport(transOpts).then(function (result) {
-                            _this._onDataArrived(result, resolve, reject);
+                            _this.__onDataArrived(result, resolve, reject);
                         }, function (err, at) {
                             Quic.ctx.error("ajax request is failed", transOpts, err, at);
                             reject(err, at);
@@ -76,12 +65,12 @@ var Quic;
                     return this.__fetchPromise;
                 }
             };
-            ModelState.prototype._onDataArrived = function (raw, resolve, reject) {
-                this.raw = raw;
+            Model.prototype.__onDataArrived = function (raw, resolve, reject) {
+                this.$raw = raw;
                 var result;
                 var isArr = raw.length !== undefined && raw.push && raw.shift;
-                if (this.rootData) {
-                    result = this.rootData;
+                if (this.$rootData) {
+                    result = this.$rootData;
                     if (isArr) {
                         result.length = raw.length;
                     }
@@ -89,23 +78,23 @@ var Quic;
                 //= raw.length!==undefined && raw.push && raw.shift?[]:{};
                 for (var i in raw)
                     result[i] = raw[i];
-                this.model.set_value(result, false);
-                if (this.imports === null) {
-                    this.imports = [];
-                    for (var n in this.opts.imports) {
-                        this.imports.push(imports(this.model, this.src_model, n, this.opts.imports[n]));
+                this.set_value(result, false);
+                if (this.$imports === null) {
+                    this.$imports = [];
+                    for (var n in this.$opts.imports) {
+                        this.$imports.push(imports(this, this.$src_model, n, this.$opts.imports[n]));
                     }
                 }
-                else if (this.imports) {
-                    for (var n in this.imports)
-                        this.imports[n]();
+                else if (this.$imports) {
+                    for (var n in this.$imports)
+                        this.$imports[n]();
                 }
                 this.__fetchPromise = undefined;
                 resolve(result);
             };
-            return ModelState;
-        }());
-        Models.ModelState = ModelState;
+            return Model;
+        }(Models.DataValue));
+        Models.Model = Model;
         function imports(destModel, srcModel, key, value) {
             var destValue = destModel.find(key);
             if (typeof value === "string" && value.length > 3 && value[0] === "$" && value[value.length - 1] === "}") {

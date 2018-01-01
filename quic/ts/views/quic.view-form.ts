@@ -7,44 +7,44 @@ namespace Quic{
             commit_transport?:TransportOpts;
         }
         export class FormView extends View{
-            private __disabled:Array<Node>;
+            private __disables:Array<Node>;
 
-            opts:FormViewOpts;
-            components:{[index:string]:View};
+            $opts:FormViewOpts;
+            $components:{[index:string]:View};
             
             constructor(opts:FormViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 super(opts,composite,model,quic);
-                this.viewType = "form";
+                this.$viewType = "form";
             }
             permission(value?:string):any{
                 if(value===undefined) {
-                    if(this._permission===undefined){
-                        if(this.composite) this._permission = this._originPermission = (this.composite.permission() || "validatable") as string;
-                        else this._permission = this._originPermission ="validatable";
+                    if(this.__permission===undefined){
+                        if(this.$composite) this.__permission = this.__originPermission = (this.$composite.get_permission() || "validatable") as string;
+                        else this.__permission = this.__originPermission ="validatable";
                     }
-                    return this._permission;
+                    return this.__permission;
                 }
-                if(value!==this._permission){
-                    if(this.element){
+                if(value!==this.__permission){
+                    if(this.$element){
                         if(value==="disabled"){
-                            return this.disabled(true);
+                            return this.is_disabled(true);
                         }else {
-                            this.disabled(false);
+                            this.is_disabled(false);
                         }
                         
                         if(value==="hidden"){
-                            this._permission = value;
-                            this.element.style.display="none";
+                            this.__permission = value;
+                            this.$element.style.display="none";
                         }else{
-                            this._permission = value==="quic:rollback"?this._originPermission:value;
-                            let components = this.components;
+                            this.__permission = value==="quic:rollback"?this.__originPermission:value;
+                            let components = this.$components;
                             for(let n in components){
-                                components[n].permission(value);
+                                components[n].set_permission(value);
                             }
                         }
                         return this;
                     }else {
-                        this._permission = value==="quic:reset"?this._originPermission:value;
+                        this.__permission = value==="quic:reset"?this.__originPermission:value;
                     }
     
                 }
@@ -52,9 +52,9 @@ namespace Quic{
             
             render(decoration?:boolean):HTMLElement{
                 let element = ctx.createElement("div");
-                this.element = element;
-                let id = this.name;
-                let title = this.opts.title || this.name;
+                this.$element = element;
+                let id = this.$name;
+                let title = this.$opts.title || this.$name;
                 title = this._T(title);
                 let headAtions,content,bodyActions,status,footActions;
                 if(decoration===false){
@@ -77,11 +77,11 @@ namespace Quic{
                     caption.innerHTML = title;
                 }
                 
-                let components = this.components;
+                let components = this.$components;
                 for(let viewname in components){
                     let childview = components[viewname];
                     let childElement = childview.render();
-                    let position = childview.opts.slot;
+                    let position = childview.$opts.slot;
                     switch(position){
                         case "header":headAtions.appendChild(childElement);break;
                         case "status":status.appendChild(childElement); break;
@@ -95,8 +95,8 @@ namespace Quic{
             validate(state?:any){
                 let hasError = false;
                 let result;
-                for(let n in this.components){
-                    if((result =this.components[n].validate(state))===false){
+                for(let n in this.$components){
+                    if((result =this.$components[n].validate(state))===false){
                         hasError = true;
                     }
                 }
@@ -116,13 +116,14 @@ namespace Quic{
                         if(result===false){
                             reject(false,"cancel");
                         } else {
-                            let value = this.value();
-                            let transOpts:TransportOpts = this.opts.commit_transport || {url:url};
+                            let value = this.get_value();
+                            let transOpts:TransportOpts = this.$opts.commit_transport || {url:url};
                             transOpts.url = url;
                             if(!transOpts.method) transOpts.method = "POST";
                             if(!transOpts.dataType) transOpts.dataType="json";
                             if(!transOpts.type) transOpts.type = "json";
                             transOpts.data = value;
+                            console.log("commiting",value);
                             this.waiting(true);
                             transport(transOpts).then(
                                 (data)=>{this.waiting(false);resolve(data);ctx.message(this._T("Submit successfully."));},
@@ -142,10 +143,11 @@ namespace Quic{
     
             protected init(opts:FormViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 super.init(opts, composite, model,quic);
-                this.components = {};
+                this.$components = {};
                 if(opts.fields){
-                    let compoments = this.components ={};
+                    let compoments = this.$components ={};
                     let children = opts.fields;
+                    let me :any= this;
                     for(let viewname in children){
                         let child :ViewOpts = children[viewname];
                         if(!child.name) child.name = viewname;
@@ -153,7 +155,7 @@ namespace Quic{
                         let ViewCls :any = viewTypes[viewType] || viewTypes[viewType = "text"];
                         child.viewType = viewType;
                         if(opts.name && opts.name!=viewname){throw new Error("View name in opts is different from components");}
-                        compoments[viewname] = new View(child,this);
+                        me[viewname] = compoments[viewname] = new ViewCls(child,this);
                     }
                 }
             }

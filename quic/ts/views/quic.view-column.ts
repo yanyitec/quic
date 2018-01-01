@@ -16,14 +16,13 @@ namespace Quic{
                 super(opts,grid,undefined);
                 this.frozen = opts.frozen;
                 this.resizable  = opts.resizable;
-                this.components = {};
+                this.$components = {};
             }
             render():HTMLElement{
                 let th = ctx.createElement("th");
-                th.innerHTML = this.width?"<div style='width:"+this.width+"px;'>" + this.text + "</div>":"<div>" + this.text + "</div>";
-                th.title = this.description;
+                th.innerHTML = this.$width?"<div style='width:"+this.$width+"px;'>" + this.$text + "</div>":"<div>" + this.$text + "</div>";
+                th.title = this.$description;
                 return th;
-                
             }
             
         }

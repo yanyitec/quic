@@ -156,7 +156,7 @@ var Quic;
                 this._$schema.find(text, function (propname, schema) {
                     var prop = dataValue[propname];
                     if (!prop) {
-                        dataValue[propname] = new DataValue(schema.itemSchema || schema, _this);
+                        prop = dataValue[propname] = new DataValue(schema.itemSchema || schema, _this);
                     }
                     dataValue = prop;
                 });

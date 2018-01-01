@@ -28,7 +28,7 @@ var Quic;
                         throw new Quic.Exception("cannot define prop in Array model");
                     result = (this.props || (this.props = {}))[name];
                     if (!result) {
-                        this.props[name] = new Schema(name, this);
+                        result = this.props[name] = new Schema(name, this);
                         this.isObject = true;
                     }
                 }
@@ -51,10 +51,10 @@ var Quic;
                         }
                         else {
                             if (isArray) {
-                                schema.define("quic:array");
+                                schema = schema.define("quic:array");
                             }
                             else {
-                                schema.define(name);
+                                schema = schema.define(name);
                             }
                         }
                         if (onProperty)

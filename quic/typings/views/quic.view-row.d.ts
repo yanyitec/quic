@@ -7,6 +7,9 @@ declare namespace Quic {
             columns: {
                 [index: string]: ColumnView;
             };
+            cells: {
+                [index: string]: CellView;
+            };
             index: number;
             constructor(grid: GridView, rowIndex: number, model: Models.IModel);
             render(): HTMLElement;

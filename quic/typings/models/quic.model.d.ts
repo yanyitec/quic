@@ -9,7 +9,6 @@
 declare namespace Quic {
     namespace Models {
         interface IModel extends IDataValue {
-            $model_state: ModelState;
             fetch(): IPromise;
         }
         interface IModelAccess {
@@ -27,23 +26,17 @@ declare namespace Quic {
             schema?: ISchema;
         }
         class Model extends DataValue implements IModel {
-            $model_state: ModelState;
+            $opts: ModelOpts;
+            $src_model: IModel;
+            $transport: TransportOpts;
+            $imports: Array<Function>;
+            $raw: any;
+            $rootData: any;
+            $data: any;
+            __fetchPromise: IPromise;
             constructor(opts: ModelOpts, rootData?: any);
             fetch(): IPromise;
-        }
-        class ModelState {
-            opts: ModelOpts;
-            model: Model;
-            src_model: IModel;
-            transport: TransportOpts;
-            imports: Array<Function>;
-            raw: any;
-            rootData: any;
-            data: any;
-            __fetchPromise: IPromise;
-            constructor(opts: ModelOpts, rootData: any, model: Model);
-            fetch(): IPromise;
-            _onDataArrived(raw: any, resolve: any, reject: any): void;
+            __onDataArrived(raw: any, resolve: any, reject: any): void;
         }
     }
 }

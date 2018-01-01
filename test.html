@@ -23,8 +23,13 @@
 
         <!--import views-->
         <script type="text/javascript" src="quic/js/views/quic.view.js"></script>
+        <script type="text/javascript" src="quic/js/views/quic.view-submit.js"></script>        
         <script type="text/javascript" src="quic/js/views/quic.view-form.js"></script>
-
+        <script type="text/javascript" src="quic/js/views/quic.view-grid.js"></script>
+        <script type="text/javascript" src="quic/js/views/quic.view-column.js"></script>
+        <script type="text/javascript" src="quic/js/views/quic.view-row.js"></script>
+        <script type="text/javascript" src="quic/js/views/quic.view-cell.js"></script>
+        
         <!--import packages-->
         <script type="text/javascript" src="quic/js/packages/quic.package.js"></script>
 
@@ -39,12 +44,19 @@
         <script type="text/javascript">
         var opts = {
             element : document.getElementById("quic_area"),
+            viewType:"grid",
             fields:{
                 "Id":{
-
+                    datapath:"Id"
                 },
                 "Name":{
-
+                    datapath:"Name"
+                    ,validations:{
+                        required:true
+                    }
+                },
+                "Submit":{
+                    viewType:"submit"
                 }
             }
         };   

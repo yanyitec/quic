@@ -72,7 +72,9 @@ declare namespace Quic {
          * @returns {IPromise}
          * @memberof IContext
          */
-        confirm(msg: string, title?: string): Promise;
+        confirm(msg: string, title?: string): IPromise;
+        message(msg: string, title?: string): IPromise;
+        validateInfo(msg: any): IPromise;
         info: Function;
         /**
          * 对控制台error的抽象

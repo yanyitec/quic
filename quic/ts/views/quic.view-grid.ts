@@ -11,8 +11,8 @@ namespace Quic{
             pagesize?:number;
         }
         export class GridView extends FormView{
-            columns:{[index:string]:ColumnView};
-            opts:GridViewOpts;
+            $columns:{[index:string]:ColumnView};
+            $opts:GridViewOpts;
             __count:number;
             __elems:any;
             constructor(opts:GridViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
@@ -24,20 +24,21 @@ namespace Quic{
                 opts.fields = null;
                 super.init(opts,composite,model,quic);
                 opts.fields= fields;
-                this.columns={};
+                this.$columns={};
                 for(let n in fields){
                     let columnOpts = fields[n];
+                    if(!columnOpts.name)columnOpts.name = n;
                     let column = new ColumnView(columnOpts,this);
-                    this.columns[n] = column;
+                    this.$columns[column.$name] = column;
                 }
-                this.components = {};
+                this.$components = {};
                 
             }
 
 
             render(decoration?:boolean):HTMLElement{
                 let element = ctx.createElement("div");
-                let title = this.opts.title;
+                let title = this.$opts.title;
                 let html = '<div class="quic-header"><span class="quic-caption">' + title + '</span><span class="quic-actions"></span></div>';
                 html += '<div class="quic-body"><div class="quic-filter"></div><div class="quic-tb">'
                             +'<div class="quic-thead">'
@@ -61,7 +62,7 @@ namespace Quic{
                 elems.footActions = element.lastChild.lastChild;
                 elems.caption.innerHTML = title;
 
-                let columns = this.columns;
+                let columns = this.$columns;
                 let hrow:any = RowView.renderCells(columns,"th");
                 if(hrow.quic_frozen_row)elems.frozenTHead.appendChild(hrow.quic_frozen_row);
                 elems.scrollableTHead.appendChild(hrow);
@@ -71,7 +72,7 @@ namespace Quic{
 
             
             refresh(){
-                let columns = this.columns;
+                let columns = this.$columns;
                 let rows ;//= this.model.data;
                 let html = '<div class="quic-tbody-frozen"><table><tbody></tbody></table></div>'
                 +'<div class="quic-tbody-scrollable"><table><tbody></tbody></table></div>';
@@ -100,7 +101,7 @@ namespace Quic{
                 throw "not implement";
             }
             protected buildTHead(scrollableTHead:HTMLTableSectionElement,frozenTHead:HTMLTableSectionElement){
-                let row = RowView.renderCells(this.columns,"th");
+                let row = RowView.renderCells(this.$columns,"th");
                 scrollableTHead.appendChild(row);
                 if((row as any).quic_frozen_row){
                     frozenTHead.appendChild((row as any).quic_frozen_row);
@@ -109,18 +110,20 @@ namespace Quic{
             protected buildTBody(scrollableTBody:HTMLTableSectionElement,frozenTBody:HTMLTableSectionElement){
                 let rows = this.get_rows();
                 let count = rows.length;
+                let me :any= this;
                 for(let i=count;i<this.__count;i++){
-                    let invalid = this.components[i];
+                    let invalid = this.$components[i];
                     invalid.dispose();
-                    delete this.components[i];
+                    delete this.$components[i];
+                    delete me[i];
                 } 
                 for(let i=0;i<count;i++){
                     let ds : any ;
                     if(i<this.__count){
-                        this.components[i].dispose();
+                        this.$components[i].dispose();
                     }
                     let rowView = new RowView(this,i,ds);
-                    this.components[i] = rowView;
+                    this.$components[i] = rowView;
                     let row = rowView.render();
                     scrollableTBody.appendChild(row);
                     if((row as any).quic_frozen_row){

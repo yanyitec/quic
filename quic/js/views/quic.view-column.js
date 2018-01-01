@@ -21,13 +21,13 @@ var Quic;
                 var _this = _super.call(this, opts, grid, undefined) || this;
                 _this.frozen = opts.frozen;
                 _this.resizable = opts.resizable;
-                _this.components = {};
+                _this.$components = {};
                 return _this;
             }
             ColumnView.prototype.render = function () {
                 var th = Quic.ctx.createElement("th");
-                th.innerHTML = this.width ? "<div style='width:" + this.width + "px;'>" + this.text + "</div>" : "<div>" + this.text + "</div>";
-                th.title = this.description;
+                th.innerHTML = this.$width ? "<div style='width:" + this.$width + "px;'>" + this.$text + "</div>" : "<div>" + this.$text + "</div>";
+                th.title = this.$description;
                 return th;
             };
             return ColumnView;

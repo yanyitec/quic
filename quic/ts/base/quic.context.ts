@@ -74,9 +74,9 @@ namespace Quic{
          * @returns {IPromise} 
          * @memberof IContext
          */
-        confirm(msg:string,title?:string):Promise;
-        message(msg:string,title?:string):Promise;
-        validateInfo(msg:any):Promise;
+        confirm(msg:string,title?:string):IPromise;
+        message(msg:string,title?:string):IPromise;
+        validateInfo(msg:any):IPromise;
         info:Function;
         /**
          * 对控制台error的抽象

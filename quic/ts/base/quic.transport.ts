@@ -21,12 +21,7 @@ namespace Quic{
             let data:string = makeData(method,type,opts.data);
 
             let xhr :XMLHttpRequest = new XMLHttpRequest();
-            let contentType :string = contentTypes[type];
-            if(contentType) xhr.setRequestHeader("Content-Type", contentType);
-            let headers :{[index:string]:string} = opts.headers;
-            if(headers) {
-                for(let n in headers) xhr.setRequestHeader(n,headers[n]);
-            }
+            
             super((resolve:Function,reject:Function)=>{
                 xhr.onreadystatechange = ()=>{
                     if(xhr.readyState===4){
@@ -34,6 +29,12 @@ namespace Quic{
                     }
                 };
                 xhr.open(method,url,opts.sync);
+                let contentType :string = contentTypes[type];
+                if(contentType) xhr.setRequestHeader("Content-Type", contentType);
+                let headers :{[index:string]:string} = opts.headers;
+                if(headers) {
+                    for(let n in headers) xhr.setRequestHeader(n,headers[n]);
+                }
                 xhr.send(data);
     
             });

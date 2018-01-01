@@ -17,50 +17,50 @@ var Quic;
             __extends(FormView, _super);
             function FormView(opts, composite, model, quic) {
                 var _this = _super.call(this, opts, composite, model, quic) || this;
-                _this.viewType = "form";
+                _this.$viewType = "form";
                 return _this;
             }
             FormView.prototype.permission = function (value) {
                 if (value === undefined) {
-                    if (this._permission === undefined) {
-                        if (this.composite)
-                            this._permission = this._originPermission = (this.composite.permission() || "validatable");
+                    if (this.__permission === undefined) {
+                        if (this.$composite)
+                            this.__permission = this.__originPermission = (this.$composite.get_permission() || "validatable");
                         else
-                            this._permission = this._originPermission = "validatable";
+                            this.__permission = this.__originPermission = "validatable";
                     }
-                    return this._permission;
+                    return this.__permission;
                 }
-                if (value !== this._permission) {
-                    if (this.element) {
+                if (value !== this.__permission) {
+                    if (this.$element) {
                         if (value === "disabled") {
-                            return this.disabled(true);
+                            return this.is_disabled(true);
                         }
                         else {
-                            this.disabled(false);
+                            this.is_disabled(false);
                         }
                         if (value === "hidden") {
-                            this._permission = value;
-                            this.element.style.display = "none";
+                            this.__permission = value;
+                            this.$element.style.display = "none";
                         }
                         else {
-                            this._permission = value === "quic:rollback" ? this._originPermission : value;
-                            var components = this.components;
+                            this.__permission = value === "quic:rollback" ? this.__originPermission : value;
+                            var components = this.$components;
                             for (var n in components) {
-                                components[n].permission(value);
+                                components[n].set_permission(value);
                             }
                         }
                         return this;
                     }
                     else {
-                        this._permission = value === "quic:reset" ? this._originPermission : value;
+                        this.__permission = value === "quic:reset" ? this.__originPermission : value;
                     }
                 }
             };
             FormView.prototype.render = function (decoration) {
                 var element = Quic.ctx.createElement("div");
-                this.element = element;
-                var id = this.name;
-                var title = this.opts.title || this.name;
+                this.$element = element;
+                var id = this.$name;
+                var title = this.$opts.title || this.$name;
                 title = this._T(title);
                 var headAtions, content, bodyActions, status, footActions;
                 if (decoration === false) {
@@ -82,11 +82,11 @@ var Quic;
                     footActions = element.lastChild.lastChild;
                     caption.innerHTML = title;
                 }
-                var components = this.components;
+                var components = this.$components;
                 for (var viewname in components) {
                     var childview = components[viewname];
                     var childElement = childview.render();
-                    var position = childview.opts.slot;
+                    var position = childview.$opts.slot;
                     switch (position) {
                         case "header":
                             headAtions.appendChild(childElement);
@@ -105,6 +105,49 @@ var Quic;
                 }
                 return element;
             };
+            FormView.prototype.validate = function (state) {
+                var hasError = false;
+                var result;
+                for (var n in this.$components) {
+                    if ((result = this.$components[n].validate(state)) === false) {
+                        hasError = true;
+                    }
+                }
+                return hasError ? false : result;
+            };
+            FormView.prototype.waiting = function (block) { };
+            FormView.prototype.submit = function (url) {
+                var _this = this;
+                return new Quic.Promise(function (resolve, reject) {
+                    var state = {};
+                    if (_this.validate(state) === false) {
+                        Quic.ctx.validateInfo(state).done(function () {
+                            reject(state, "validate");
+                        });
+                        return;
+                    }
+                    Quic.ctx.confirm(_this._T("Do you want to submit?"), _this._T("Confirm")).then(function (result) {
+                        if (result === false) {
+                            reject(false, "cancel");
+                        }
+                        else {
+                            var value = _this.get_value();
+                            var transOpts = _this.$opts.commit_transport || { url: url };
+                            transOpts.url = url;
+                            if (!transOpts.method)
+                                transOpts.method = "POST";
+                            if (!transOpts.dataType)
+                                transOpts.dataType = "json";
+                            if (!transOpts.type)
+                                transOpts.type = "json";
+                            transOpts.data = value;
+                            console.log("commiting", value);
+                            _this.waiting(true);
+                            Quic.transport(transOpts).then(function (data) { _this.waiting(false); resolve(data); Quic.ctx.message(_this._T("Submit successfully.")); }, function (err, t) { _this.waiting(false); Quic.ctx.alert(_this._T("Submit failed:" + err)); reject(err, "transport"); });
+                        }
+                    });
+                });
+            };
             FormView.prototype.render_visibleonly = function (decoration) {
                 return this.render(decoration);
             };
@@ -113,10 +156,11 @@ var Quic;
             };
             FormView.prototype.init = function (opts, composite, model, quic) {
                 _super.prototype.init.call(this, opts, composite, model, quic);
-                this.components = {};
+                this.$components = {};
                 if (opts.fields) {
-                    var compoments = this.components = {};
+                    var compoments = this.$components = {};
                     var children = opts.fields;
+                    var me = this;
                     for (var viewname in children) {
                         var child = children[viewname];
                         if (!child.name)
@@ -127,7 +171,7 @@ var Quic;
                         if (opts.name && opts.name != viewname) {
                             throw new Error("View name in opts is different from components");
                         }
-                        compoments[viewname] = new Views.View(child, this);
+                        me[viewname] = compoments[viewname] = new ViewCls(child, this);
                     }
                 }
             };

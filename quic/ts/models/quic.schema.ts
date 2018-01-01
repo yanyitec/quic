@@ -62,7 +62,7 @@ namespace Quic{
                     if(this.isArray) throw new Exception("cannot define prop in Array model");
                     result = (this.props|| (this.props={}))[name];
                     if(!result){
-                        this.props[name]=new Schema(name,this);
+                        result = this.props[name]=new Schema(name,this);
                         this.isObject=true;
                     }
                 }
@@ -83,9 +83,9 @@ namespace Quic{
                             else throw new Error("invalid expression,no more $SUPER:"+text);
                         }else {
                             if(isArray){
-                                schema.define("quic:array");
+                                schema = schema.define("quic:array") as ISchema;
                             }else {
-                                schema.define(name);
+                                schema = schema.define(name) as ISchema;
                             }
                         }
                         if(onProperty) onProperty(name,schema);

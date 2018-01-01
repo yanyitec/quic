@@ -19,9 +19,9 @@ var Quic;
             __extends(CellView, _super);
             function CellView(column, row) {
                 var _this = _super.call(this, null) || this;
-                _this.opts = column.opts;
-                _this.composite = row;
-                _this.model = row.model;
+                _this.$opts = column.$opts;
+                _this.$composite = row;
+                _this.$model = row.$model;
                 return _this;
             }
             return CellView;

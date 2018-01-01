@@ -43,6 +43,24 @@ var Quic;
         return t;
     }
     Quic.getExactType = getExactType;
+    function str_replace(text, data) {
+        if (!text || !data)
+            return text;
+        return text.toString().replace(/\$\{([a-zA-Z0-9\$_.]+)\}/g, function (match) {
+            var path = match[1];
+            var lastAt = 0;
+            var at = 0;
+            while ((at = path.indexOf(".", lastAt)) >= 0) {
+                var p_1 = path.substring(lastAt, at);
+                if (!(data = data[p_1]))
+                    return data;
+                lastAt = at;
+            }
+            var p = path.substring(lastAt);
+            return data[p];
+        });
+    }
+    Quic.str_replace = str_replace;
     function extend1(dest, src, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         if (!src)
             return dest;

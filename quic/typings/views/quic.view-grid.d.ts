@@ -8,10 +8,10 @@ declare namespace Quic {
             pagesize?: number;
         }
         class GridView extends FormView {
-            columns: {
+            $columns: {
                 [index: string]: ColumnView;
             };
-            opts: GridViewOpts;
+            $opts: GridViewOpts;
             __count: number;
             __elems: any;
             constructor(opts: GridViewOpts, composite?: View, model?: Models.IModel, quic?: IQuicInstance);
