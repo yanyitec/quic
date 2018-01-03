@@ -38,7 +38,7 @@ var Quic;
         instance.package.done(function (pack) { return packageDone(instance, opts, resolve, reject); });
     }
     function packageDone(instance, opts, resolve, reject) {
-        instance.fields = instance.package.field_config(opts.setting, opts.includes || opts.fields);
+        instance.fields = instance.package.field_config(opts.setting, opts.includes || opts.fields, opts.excludes, opts.permission);
         var controller;
         if (opts.controller) {
             if (typeof opts.controller === "function") {

@@ -16,7 +16,6 @@ namespace Quic{
             name?:string;
             desciption?:string;
             decoration?:boolean;
-    
             slot?:string;
             validations?:{[index:string]:any};
             events?:{[index:string]:Function};

@@ -21,6 +21,7 @@ namespace Quic{
         model:any;
         viewType:string;
         setting:string;
+        permission?:string;
         controller:IController;
     }
     export interface IQuicInstance extends IObservable,IController{
@@ -68,7 +69,7 @@ namespace Quic{
         instance.package.done((pack)=>packageDone(instance,opts,resolve,reject));        
     }
     function packageDone(instance:QuicInstance,opts:QuicOpts,resolve,reject){
-        instance.fields = instance.package.field_config(opts.setting,opts.includes || opts.fields);
+        instance.fields = instance.package.field_config(opts.setting,opts.includes || opts.fields,opts.excludes,opts.permission);
         let controller:IController;
         if(opts.controller){
             if(typeof opts.controller ==="function"){

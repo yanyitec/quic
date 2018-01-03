@@ -16,6 +16,7 @@ namespace Quic{
                 super(opts,composite,model,quic);
                 this.$viewType = "form";
             }
+
             permission(value?:string):any{
                 if(value===undefined) {
                     if(this.__permission===undefined){
@@ -140,7 +141,6 @@ namespace Quic{
             protected render_writable(decoration?:boolean):HTMLElement{
                 return this.render(decoration);
             }
-    
             protected init(opts:FormViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 super.init(opts, composite, model,quic);
                 this.$components = {};

@@ -1,4 +1,5 @@
 /// <reference path="quic.view.ts" />
+/// <reference path="quic.view-row.ts" />
 /// <reference path="../quic.instance.ts" />
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -35,6 +36,7 @@ var Quic;
                 this.$components = {};
             };
             GridView.prototype.render = function (decoration) {
+                var _this = this;
                 var element = Quic.ctx.createElement("div");
                 var title = this.$opts.title;
                 var html = '<div class="quic-header"><span class="quic-caption">' + title + '</span><span class="quic-actions"></span></div>';
@@ -47,7 +49,7 @@ var Quic;
                     + '</div></div>';
                 html += '<div class="quic-footer"><span class="quic-status"></span><span class="quic-actions"></span></div>';
                 element.innerHTML = html;
-                var elems = {};
+                var elems = this.__elems = {};
                 elems.caption = element.firstChild.firstChild;
                 elems.headAtions = element.firstChild.lastChild;
                 var body = elems.body = element.childNodes[1];
@@ -64,12 +66,14 @@ var Quic;
                 if (hrow.quic_frozen_row)
                     elems.frozenTHead.appendChild(hrow.quic_frozen_row);
                 elems.scrollableTHead.appendChild(hrow);
-                //this.datasource.data().done((data)=>this.refresh());
+                this.$model.subscribe(function () {
+                    _this.refresh();
+                }).fetch();
                 return element;
             };
             GridView.prototype.refresh = function () {
                 var columns = this.$columns;
-                var rows; //= this.model.data;
+                var rows = this.get_rows(); //= this.model.data;
                 var html = '<div class="quic-tbody-frozen"><table><tbody></tbody></table></div>'
                     + '<div class="quic-tbody-scrollable"><table><tbody></tbody></table></div>';
                 var tbody = this.__elems.tbody;
@@ -80,7 +84,7 @@ var Quic;
                     var rowDsOpts = {
                         data: rows[i]
                     };
-                    var ds = void 0; // = new DataSource(rowDsOpts,this.exprFactory);
+                    var ds = new Quic.Models.Model(rowDsOpts); // = new DataSource(rowDsOpts,this.exprFactory);
                     var rowView = new Views.RowView(this, i, ds);
                     var row = rowView.render();
                     scrollableTBody.appendChild(row);
@@ -90,7 +94,7 @@ var Quic;
                 }
             };
             GridView.prototype.get_rows = function () {
-                throw "not implement";
+                return this.$model.get_value();
             };
             GridView.prototype.get_total = function () {
                 throw "not implement";

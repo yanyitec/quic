@@ -17,7 +17,7 @@ declare namespace Quic {
              */
             field_config(setting: string, includes?: {
                 [index: string]: Views.ViewOpts;
-            }, excludes?: Array<string>): any;
+            }, excludes?: Array<string>, defaultPermssion?: string): any;
         }
         class Package extends Promise {
             fields: {
@@ -30,9 +30,7 @@ declare namespace Quic {
             };
             dynamic: boolean;
             constructor(opts: any);
-            field_config(setting: string, includes?: {
-                [index: string]: Views.ViewOpts;
-            }, excludes?: Array<string>): {
+            field_config(setting: string, includes?: any, excludes?: Array<string>, defaultPermission?: string): {
                 [index: string]: Views.ViewOpts;
             };
         }

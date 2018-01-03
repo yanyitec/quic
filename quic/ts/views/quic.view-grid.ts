@@ -1,5 +1,6 @@
 
 /// <reference path="quic.view.ts" />
+/// <reference path="quic.view-row.ts" />
 /// <reference path="../quic.instance.ts" />
 
 namespace Quic{
@@ -17,7 +18,6 @@ namespace Quic{
             __elems:any;
             constructor(opts:GridViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 super(opts,composite,model,quic);
-                
             }
             init(opts:GridViewOpts,composite?:View,model?:Models.IModel,quic?:IQuicInstance){
                 let fields = opts.fields;
@@ -49,7 +49,7 @@ namespace Quic{
                         +'</div></div>';
                 html += '<div class="quic-footer"><span class="quic-status"></span><span class="quic-actions"></span></div>';
                 element.innerHTML = html;
-                let elems:any = {};
+                let elems:any = this.__elems= {};
                 elems.caption = element.firstChild.firstChild as HTMLElement;
                 elems.headAtions = element.firstChild.lastChild;
                 var body = elems.body = element.childNodes[1];
@@ -66,14 +66,16 @@ namespace Quic{
                 let hrow:any = RowView.renderCells(columns,"th");
                 if(hrow.quic_frozen_row)elems.frozenTHead.appendChild(hrow.quic_frozen_row);
                 elems.scrollableTHead.appendChild(hrow);
-                //this.datasource.data().done((data)=>this.refresh());
+                (<Models.IModel>this.$model.subscribe(()=>{
+                    this.refresh();
+                })).fetch();
                 return element;
             }
 
             
             refresh(){
                 let columns = this.$columns;
-                let rows ;//= this.model.data;
+                let rows =this.get_rows();//= this.model.data;
                 let html = '<div class="quic-tbody-frozen"><table><tbody></tbody></table></div>'
                 +'<div class="quic-tbody-scrollable"><table><tbody></tbody></table></div>';
                 let tbody = this.__elems.tbody;
@@ -84,7 +86,7 @@ namespace Quic{
                     let rowDsOpts = {
                         data:rows[i]
                     };
-                    let ds:any;// = new DataSource(rowDsOpts,this.exprFactory);
+                    let ds:any = new Models.Model(rowDsOpts);// = new DataSource(rowDsOpts,this.exprFactory);
                     let rowView = new RowView(this,i,ds);
                     let row = rowView.render();
                     scrollableTBody.appendChild(row);
@@ -95,7 +97,7 @@ namespace Quic{
             }
 
             get_rows():Array<object>{
-                throw "not implement";
+                return this.$model.get_value();
             }
             get_total():number{
                 throw "not implement";

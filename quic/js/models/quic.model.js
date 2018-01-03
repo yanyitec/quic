@@ -90,6 +90,12 @@ var Quic;
                         this.$imports[n]();
                 }
                 this.__fetchPromise = undefined;
+                this.notify({
+                    value: result,
+                    publisher: this,
+                    old_value: null,
+                    src: null
+                });
                 resolve(result);
             };
             return Model;

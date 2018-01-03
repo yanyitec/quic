@@ -1,4 +1,5 @@
 /// <reference path="quic.view.d.ts" />
+/// <reference path="quic.view-row.d.ts" />
 /// <reference path="../quic.instance.d.ts" />
 declare namespace Quic {
     namespace Views {

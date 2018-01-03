@@ -20,6 +20,7 @@ declare namespace Quic {
         model: any;
         viewType: string;
         setting: string;
+        permission?: string;
         controller: IController;
     }
     interface IQuicInstance extends IObservable, IController {
